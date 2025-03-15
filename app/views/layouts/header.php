@@ -7,8 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
-<body>
-    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+<body data-user-logged-in="<?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>">
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;"></div>
     
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
@@ -34,7 +34,18 @@
                         <li class="nav-item">
                             <a class="nav-link" href="/cart">
                                 Cart
-                                <span class="badge bg-danger rounded-pill cart-count position-absolute">0</span>
+                                <span class="badge bg-danger rounded-pill cart-count position-absolute" 
+                                      style="display: <?= isset($_SESSION['cart']) && !empty($_SESSION['cart']) ? 'inline-block' : 'none' ?>">
+                                    <?php
+                                    $cartCount = 0;
+                                    if (isset($_SESSION['cart'])) {
+                                        $cartCount = array_reduce($_SESSION['cart'], function($sum, $item) {
+                                            return $sum + $item['quantity'];
+                                        }, 0);
+                                    }
+                                    echo $cartCount;
+                                    ?>
+                                </span>
                             </a>
                         </li>
                         <li class="nav-item">

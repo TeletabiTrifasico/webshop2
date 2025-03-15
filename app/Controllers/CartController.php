@@ -19,73 +19,113 @@ class CartController extends Controller {
         }
 
         $cart = [];
-        if (isset($_SESSION['cart'])) {
-            $cartItems = $_SESSION['cart'];
-            foreach ($cartItems as $item) {
+        $total = 0;
+
+        if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
+            foreach ($_SESSION['cart'] as $item) {
                 $product = $this->productModel->findById($item['productId']);
                 if ($product) {
+                    $subtotal = $product['price'] * $item['quantity'];
+                    $total += $subtotal;
                     $cart[] = [
                         'product' => $product,
-                        'quantity' => $item['quantity']
+                        'quantity' => $item['quantity'],
+                        'subtotal' => $subtotal
                     ];
                 }
             }
         }
 
-        $this->view('cart/index', ['cart' => $cart]);
+        $this->view('cart/index', [
+            'cart' => $cart,
+            'total' => $total
+        ]);
     }
 
-    public function addItem($productId) {
+    public function addItem() {
+        if (!isset($_SESSION['user_id'])) {
+            $this->jsonResponse(['success' => false, 'message' => 'Please login to add items to cart']);
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /products');
+            exit;
+        }
+
+        $productId = $_POST['product_id'];
+        $quantity = (int)($_POST['quantity'] ?? 1);
+
         if (!isset($_SESSION['cart'])) {
             $_SESSION['cart'] = [];
         }
 
-        $exists = false;
+        // Check if product already exists in cart
+        $found = false;
         foreach ($_SESSION['cart'] as &$item) {
             if ($item['productId'] == $productId) {
-                $item['quantity']++;
-                $exists = true;
+                $item['quantity'] += $quantity;
+                $found = true;
                 break;
             }
         }
 
-        if (!$exists) {
+        // If product not found in cart, add it
+        if (!$found) {
             $_SESSION['cart'][] = [
                 'productId' => $productId,
-                'quantity' => 1
+                'quantity' => $quantity
             ];
         }
 
-        header('Location: /cart');
+        $this->jsonResponse([
+            'success' => true,
+            'message' => 'Product added to cart',
+            'cartCount' => array_reduce($_SESSION['cart'], function($sum, $item) {
+                return $sum + $item['quantity'];
+            }, 0)
+        ]);
     }
 
-    public function removeItem($productId) {
-        if (isset($_SESSION['cart'])) {
-            $_SESSION['cart'] = array_filter($_SESSION['cart'], function($item) use ($productId) {
-                return $item['productId'] != $productId;
-            });
-        }
-
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true]);
-            exit;
-        }
-
-        header('Location: /cart');
-        exit;
-    }
-
-    public function updateQuantity($productId, $quantity) {
-        if (!isset($_SESSION['cart'])) {
+    public function removeItem() {
+        if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid request']);
             return;
         }
 
-        if ($quantity <= 0) {
-            $this->removeItem($productId);
+        $productId = $_POST['product_id'];
+
+        // Remove item from cart
+        $_SESSION['cart'] = array_filter($_SESSION['cart'], function($item) use ($productId) {
+            return $item['productId'] != $productId;
+        });
+
+        // Get updated cart total
+        $cartTotal = array_reduce($_SESSION['cart'], function($sum, $item) {
+            return $sum + $item['quantity'];
+        }, 0);
+
+        $this->jsonResponse([
+            'success' => true,
+            'cartCount' => $cartTotal
+        ]);
+    }
+
+    public function updateQuantity() {
+        if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid request']);
             return;
         }
 
+        $productId = $_POST['product_id'];
+        $quantity = (int)$_POST['quantity'];
+
+        if ($quantity < 1) {
+            $this->jsonResponse(['success' => false, 'message' => 'Invalid quantity']);
+            return;
+        }
+
+        // Update cart quantity
         foreach ($_SESSION['cart'] as &$item) {
             if ($item['productId'] == $productId) {
                 $item['quantity'] = $quantity;
@@ -93,9 +133,15 @@ class CartController extends Controller {
             }
         }
 
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true]);
-        exit;
+        // Get updated cart total
+        $cartTotal = array_reduce($_SESSION['cart'], function($sum, $item) {
+            return $sum + $item['quantity'];
+        }, 0);
+
+        $this->jsonResponse([
+            'success' => true,
+            'cartCount' => $cartTotal
+        ]);
     }
 
     public function checkout() {

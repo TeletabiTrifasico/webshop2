@@ -1,10 +1,7 @@
-// JavaScript for managing the shopping cart.
+// JavaScript for managing the shopping cart
 
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-
-// Adding items to the cart
 function handleAddToCart(productId, quantity) {
-    const userLoggedIn = document.body.dataset.userLoggedIn === 'true';
+    const userLoggedIn = document.body.getAttribute('data-user-logged-in') === 'true';
     
     if (!userLoggedIn) {
         window.location.href = '/auth/login';
@@ -13,27 +10,26 @@ function handleAddToCart(productId, quantity) {
 
     const formData = new FormData();
     formData.append('product_id', productId);
+    formData.append('quantity', quantity);
 
     fetch('/cart/add', {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
-    .then(response => {
-        if (response.ok) {
-            let cartData = JSON.parse(sessionStorage.getItem('cart')) || [];
-            const existingItem = cartData.find(item => item.productId === productId);
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            updateCartBadge(data.cartCount);
             
-            if (existingItem) {
-                existingItem.quantity += quantity;
-            } else {
-                cartData.push({ productId, quantity });
+            if (window.location.pathname === '/cart') {
+                window.location.reload();
             }
-            
-            sessionStorage.setItem('cart', JSON.stringify(cartData));
-            updateCartDisplay();
-            showMessage('Product added to cart!', 'success');
         } else {
-            showMessage('Failed to add product to cart.', 'error');
+            showMessage(data.message || 'Failed to add product to cart.', 'error');
         }
     })
     .catch(error => {
@@ -42,47 +38,37 @@ function handleAddToCart(productId, quantity) {
     });
 }
 
-// Add items to cart
-function addToCart(productId, quantity) {
-    const existingItem = cart.find(item => item.productId === productId);
-    
-    if (existingItem) {
-        existingItem.quantity += quantity;
-    } else {
-        cart.push({ productId, quantity });
-    }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartDisplay();
-}
-
-// Update quantity of item in cart
 function updateQuantity(productId, newQuantity) {
+    if (newQuantity < 1) return;
+
     const formData = new FormData();
     formData.append('product_id', productId);
     formData.append('quantity', newQuantity);
 
     fetch('/cart/update', {
         method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         body: formData
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            updateCartBadge(data.cartCount);
             window.location.reload();
         } else {
-            showMessage('Failed to update quantity.', 'error');
+            showMessage('Failed to update quantity', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showMessage('An error occurred.', 'error');
+        showMessage('An error occurred while updating quantity', 'error');
     });
 }
 
-// Remove items from cart
 function removeFromCart(productId) {
-    if (!confirm('Are you sure you want to remove this item from your cart?')) {
+    if (!confirm('Are you sure you want to remove this item?')) {
         return;
     }
 
@@ -96,108 +82,102 @@ function removeFromCart(productId) {
         },
         body: formData
     })
-    .then(response => {
-        if (response.ok) {
-            const row = document.querySelector(`tr[data-product-id="${productId}"]`);
-            if (row) {
-                row.remove();
-                updateCartTotals();
-                showMessage('Product removed from cart', 'success');
-            }
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateCartBadge(data.cartCount);
+            window.location.reload();
         } else {
-            throw new Error('Failed to remove item');
+            showMessage('Failed to remove item', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showMessage('Failed to remove item from cart', 'error');
+        showMessage('An error occurred while removing item', 'error');
     });
 }
 
-// Update totals
-function updateCartTotals() {
-    const rows = document.querySelectorAll('tbody tr');
-    let total = 0;
-
-    rows.forEach(row => {
-        const price = parseFloat(row.querySelector('td:nth-child(2)').textContent.replace('$', '').replace(',', ''));
-        const quantity = parseInt(row.querySelector('.quantity-control span').textContent);
-        total += price * quantity;
-    });
-
-    const totalElement = document.querySelector('#cart-total');
-    if (totalElement) {
-        totalElement.textContent = `$${total.toFixed(2)}`;
+function processCheckout() {
+    if (confirm('Are you sure you want to complete your order?')) {
+        fetch('/cart/checkout', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                showMessage(data.message || 'Failed to process order.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('An error occurred while processing your order.', 'error');
+        });
     }
+}
 
-    // Update cart badge
+function updateCartBadge(count) {
     const cartBadge = document.querySelector('.cart-count');
     if (cartBadge) {
-        const totalItems = Array.from(rows).reduce((sum, row) => {
-            return sum + parseInt(row.querySelector('.quantity-control span').textContent);
-        }, 0);
-        cartBadge.textContent = totalItems;
-        cartBadge.style.display = totalItems > 0 ? 'inline-block' : 'none';
-    }
-
-    // Reload to show empty cart message if no items left
-    if (rows.length === 0) {
-        location.reload(); 
-    }
-}
-
-// Update cart display
-function updateCartDisplay() {
-    const cartData = JSON.parse(sessionStorage.getItem('cart')) || [];
-    const cartCount = document.querySelector('.cart-count');
-    
-    if (cartCount) {
-        // Calculate total quantity of all items
-        const totalItems = cartData.reduce((sum, item) => sum + (parseInt(item.quantity) || 0), 0);
-        
-        // Update badge visibility and count
-        cartCount.textContent = totalItems;
-        cartCount.style.display = totalItems > 0 ? 'flex' : 'none';
-    }
-}
-
-// Checkout
-function checkout() {
-    console.log('Proceeding to checkout with items:', cart);
-}
-
-// Initialize cart display
-document.addEventListener('DOMContentLoaded', () => {
-    updateCartDisplay();
-    document.getElementById('checkout-button').addEventListener('click', checkout);
-});
-
-function updateCartCount(increment = 0) {
-    const cartBadge = document.querySelector('.cart-count');
-    if (cartBadge) {
-        let count = parseInt(cartBadge.textContent || '0');
-        count += increment;
-        cartBadge.textContent = count;
-        cartBadge.style.display = count > 0 ? 'inline-block' : 'none';
+        if (count > 0) {
+            cartBadge.textContent = count;
+            cartBadge.style.display = 'inline-block';
+        } else {
+            cartBadge.textContent = '';
+            cartBadge.style.display = 'none';
+        }
     }
 }
 
 function showMessage(message, type) {
+    const toastContainer = document.querySelector('.toast-container');
+    
     const toast = document.createElement('div');
-    toast.className = `toast position-fixed top-0 end-0 m-3 ${type === 'error' ? 'bg-danger' : 'bg-success'} text-white`;
-    toast.style.zIndex = '1050';
+    toast.className = `toast ${type} show`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
     toast.innerHTML = `
-        <div class="toast-body">
-            ${message}
+        <div class="toast-body d-flex justify-content-between align-items-center">
+            <span>${message}</span>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     `;
 
-    document.body.appendChild(toast);
+    toastContainer.appendChild(toast);
 
-    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
-    bsToast.show();
+    // Remove old toasts if there are more than 3
+    const toasts = toastContainer.querySelectorAll('.toast');
+    if (toasts.length > 3) {
+        toastContainer.removeChild(toasts[0]);
+    }
 
-    toast.addEventListener('hidden.bs.toast', () => {
-        document.body.removeChild(toast);
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 150);
+        }
+    }, 3000);
+
+    // Handle manual close
+    const closeButton = toast.querySelector('.btn-close');
+    closeButton.addEventListener('click', () => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 150);
     });
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const toastContainer = document.querySelector('.toast-container');
+    toastContainer.innerHTML = ''; // Clear any existing toasts
+});

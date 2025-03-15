@@ -1,6 +1,6 @@
 <?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
-<div class="container">
+<div class="container mt-4">
     <h1 class="mb-4">Shopping Cart</h1>
 
     <?php if (empty($cart)): ?>
@@ -13,10 +13,10 @@
                 <thead>
                     <tr>
                         <th>Product</th>
-                        <th>Unit Price</th>
-                        <th>Quantity</th>
-                        <th>Subtotal</th>
-                        <th>Action</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-center">Quantity</th>
+                        <th class="text-end">Subtotal</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,25 +36,21 @@
                                     <span><?= htmlspecialchars($item['product']['name']) ?></span>
                                 </div>
                             </td>
-                            <td>$<?= number_format($item['product']['price'], 2) ?></td>
-                            <td>
+                            <td class="text-end">$<?= number_format($item['product']['price'], 2) ?></td>
+                            <td class="text-center">
                                 <div class="quantity-control">
-                                    <button class="btn btn-sm btn-outline-secondary btn-minus" 
+                                    <button class="btn btn-sm btn-outline-secondary" 
                                             onclick="updateQuantity(<?= $item['product']['id'] ?>, <?= $item['quantity'] - 1 ?>)"
-                                            <?= $item['quantity'] <= 1 ? 'disabled' : '' ?>>
-                                        -
-                                    </button>
+                                            <?= $item['quantity'] <= 1 ? 'disabled' : '' ?>>-</button>
                                     <span class="mx-2"><?= $item['quantity'] ?></span>
-                                    <button class="btn btn-sm btn-outline-secondary btn-plus" 
-                                            onclick="updateQuantity(<?= $item['product']['id'] ?>, <?= $item['quantity'] + 1 ?>)">
-                                        +
-                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" 
+                                            onclick="updateQuantity(<?= $item['product']['id'] ?>, <?= $item['quantity'] + 1 ?>)">+</button>
                                 </div>
                             </td>
-                            <td>$<?= number_format($subtotal, 2) ?></td>
+                            <td class="text-end">$<?= number_format($subtotal, 2) ?></td>
                             <td>
-                                <button class="btn btn-danger btn-sm" 
-                                        onclick="removeFromCart(<?= $item['product']['id'] ?>)">Remove</button>
+                                <button onclick="removeFromCart(<?= $item['product']['id'] ?>)" 
+                                        class="btn btn-danger btn-sm">Remove</button>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -62,15 +58,16 @@
                 <tfoot>
                     <tr>
                         <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                        <td colspan="2"><strong id="cart-total">$<?= number_format($total, 2) ?></strong></td>
+                        <td class="text-end"><strong>$<?= number_format($total, 2) ?></strong></td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
-        </div>
 
-        <div class="d-flex justify-content-between mt-4">
-            <a href="/products" class="btn btn-secondary">Continue Shopping</a>
-            <button onclick="processCheckout()" class="btn btn-success">Proceed to Checkout</button>
+            <div class="d-flex justify-content-between mt-4">
+                <a href="/products" class="btn btn-secondary">Continue Shopping</a>
+                <button onclick="processCheckout()" class="btn btn-success">Proceed to Checkout</button>
+            </div>
         </div>
     <?php endif; ?>
 </div>
