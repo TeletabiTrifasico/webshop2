@@ -10,6 +10,12 @@ A modern e-commerce application built with PHP, featuring a responsive design an
 - Responsive design for all devices
 - Dynamic cart updates without page refresh
 - Secure user sessions
+- Profile management system
+- Admin dashboard with order management
+- Toast notifications for user feedback
+- Order status tracking
+- Image upload for products
+- Role-based access control (admin/user)
 
 ## Technologies Used
 - PHP 8.0+
@@ -23,17 +29,27 @@ A modern e-commerce application built with PHP, featuring a responsive design an
 webshop/
 ├── app/
 │   ├── Controllers/
+│   │   ├── AdminController.php
+│   │   ├── ApiController.php
 │   │   ├── AuthController.php
 │   │   ├── CartController.php
 │   │   ├── Controller.php
 │   │   ├── HomeController.php
-│   │   └── ProductController.php
+│   │   ├── ProductController.php
+│   │   └── UserController.php
+│   ├── Models/
+│   │   ├── Model.php
+│   │   ├── User.php
+│   │   ├── Product.php
+│   │   └── Order.php
 │   └── views/
 │       ├── layouts/
+│       ├── admin/
 │       ├── auth/
 │       ├── cart/
 │       ├── home/
-│       └── products/
+│       ├── products/
+│       └── user/
 ├── config/
 │   ├── config.php
 │   └── database.php
@@ -41,6 +57,7 @@ webshop/
     ├── css/
     ├── js/
     ├── images/
+    │   └── products/
     └── index.php
 ```
 
@@ -49,6 +66,7 @@ webshop/
 2. Configure your web server (Apache/Nginx) to point to the `public` directory
 3. Create a MySQL database named `webshop_db`
 4. Import the SQL script from the Database Setup section below
+5. Ensure write permissions for `/public/images/products` directory
 6. Start your web server
 7. Access the application through your web browser
 
@@ -130,11 +148,22 @@ INSERT INTO order_items (order_id, product_id, quantity, price) VALUES
 Note: The default password for all sample users is 'password'
 
 ## Usage
+### Customer Features
 - Browse products on the homepage
 - Register an account or login
-- Add products to cart
+- Add products to cart with real-time updates
 - View and modify cart contents
 - Complete purchase through checkout
+- Manage profile information
+- View order history
+
+### Admin Features
+- Manage products (add/edit/delete)
+- Manage users (add/edit/delete)
+- View and manage orders
+- Update order statuses
+- View dashboard statistics
+- Monitor recent orders and users
 
 ## API Endpoints
 The application provides JSON API endpoints for accessing data:
@@ -167,6 +196,9 @@ Returns the current user's cart contents. Requires authentication.
 - XSS protection
 - CSRF protection
 - Secure session handling
+- Role-based access control
+- Secure file upload handling
+- Input validation and sanitization
 
 ## Browser Support
 - Chrome (latest)
