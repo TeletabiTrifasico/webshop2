@@ -14,4 +14,9 @@ class Controller {
         extract($data);
         require __DIR__ . "/../../app/views/{$name}.php";
     }
+
+    protected function model($name) {
+        $modelClass = "\\App\\Models\\$name";
+        return new $modelClass();
+    }
 }

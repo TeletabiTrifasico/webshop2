@@ -4,8 +4,8 @@ namespace App\Controllers;
 
 class HomeController extends Controller {
     public function index() {
-        $stmt = $this->pdo->query("SELECT * FROM products ORDER BY created_at DESC LIMIT 3");
-        $products = $stmt->fetchAll();
+        $productModel = $this->model('Product');
+        $products = $productModel->getAll();
         
         $this->view('home/index', ['products' => $products]);
     }

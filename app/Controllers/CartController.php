@@ -3,8 +3,13 @@
 namespace App\Controllers;
 
 class CartController extends Controller {
+    private $productModel;
+    private $orderModel;
+
     public function __construct() {
         parent::__construct();
+        $this->productModel = $this->model('Product');
+        $this->orderModel = $this->model('Order');
     }
 
     public function index() {
@@ -15,34 +20,17 @@ class CartController extends Controller {
 
         $cart = [];
         if (isset($_SESSION['cart'])) {
-            $ids = array_column($_SESSION['cart'], 'productId');
-            if (!empty($ids)) {
-                $placeholders = str_repeat('?,', count($ids) - 1) . '?';
-                $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders)");
-                $stmt->execute($ids);
-                $products = $stmt->fetchAll();
-
-                foreach ($products as $product) {
-                    $cartItem = array_filter($_SESSION['cart'], function($item) use ($product) {
-                        return $item['productId'] == $product['id'];
-                    });
-                    $cartItem = reset($cartItem);
-                    
+            $cartItems = $_SESSION['cart'];
+            foreach ($cartItems as $item) {
+                $product = $this->productModel->findById($item['productId']);
+                if ($product) {
                     $cart[] = [
                         'product' => $product,
-                        'quantity' => $cartItem['quantity']
+                        'quantity' => $item['quantity']
                     ];
                 }
             }
         }
-
-        echo "<script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const cart = " . json_encode($_SESSION['cart'] ?? []) . ";
-                sessionStorage.setItem('cart', JSON.stringify(cart));
-                updateCartDisplay();
-            });
-        </script>";
 
         $this->view('cart/index', ['cart' => $cart]);
     }
@@ -116,73 +104,52 @@ class CartController extends Controller {
 
     public function processCheckout() {
         if (!isset($_SESSION['user_id'])) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Please login to complete your order']);
-            exit;
+            $this->jsonResponse(['success' => false, 'message' => 'Please login to complete your order']);
+            return;
         }
 
         try {
-            // Start transaction
-            $this->pdo->beginTransaction();
-
-            // Create order
-            $stmt = $this->pdo->prepare("
-                INSERT INTO orders (user_id, total_amount, status) 
-                VALUES (?, ?, 'pending')
-            ");
-
-            // Calculate total amount
             $total = 0;
-            foreach ($_SESSION['cart'] as $item) {
-                $productStmt = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
-                $productStmt->execute([$item['productId']]);
-                $product = $productStmt->fetch();
-                $total += $product['price'] * $item['quantity'];
-            }
-
-            $stmt->execute([$_SESSION['user_id'], $total]);
-            $orderId = $this->pdo->lastInsertId();
-
-            // Create order items
-            $stmt = $this->pdo->prepare("
-                INSERT INTO order_items (order_id, product_id, quantity, price) 
-                VALUES (?, ?, ?, ?)
-            ");
+            $orderItems = [];
 
             foreach ($_SESSION['cart'] as $item) {
-                $productStmt = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
-                $productStmt->execute([$item['productId']]);
-                $product = $productStmt->fetch();
-                
-                $stmt->execute([
-                    $orderId,
-                    $item['productId'],
-                    $item['quantity'],
-                    $product['price']
-                ]);
+                $product = $this->productModel->findById($item['productId']);
+                $itemTotal = $product['price'] * $item['quantity'];
+                $total += $itemTotal;
+
+                $orderItems[] = [
+                    'product_id' => $item['productId'],
+                    'quantity' => $item['quantity'],
+                    'price' => $product['price']
+                ];
             }
 
-            // Clear the cart
+            $orderData = [
+                'user_id' => $_SESSION['user_id'],
+                'total_amount' => $total,
+                'status' => 'pending',
+                'items' => $orderItems
+            ];
+
+            $this->orderModel->create($orderData);
             $_SESSION['cart'] = [];
-            
-            // Commit transaction
-            $this->pdo->commit();
 
-            header('Content-Type: application/json');
-            echo json_encode([
+            $this->jsonResponse([
                 'success' => true,
                 'message' => 'Order completed successfully!'
             ]);
-            exit;
-
-        } catch (\PDOException $e) {
-            $this->pdo->rollBack();
-            header('Content-Type: application/json');
-            echo json_encode([
+        } catch (\Exception $e) {
+            $this->jsonResponse([
                 'success' => false,
                 'message' => 'An error occurred while processing your order.'
             ]);
-            exit;
         }
+    }
+
+    private function jsonResponse($data, $code = 200) {
+        http_response_code($code);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
     }
 }

@@ -65,9 +65,13 @@
                                             <small class="text-muted">by <?= htmlspecialchars($order['username']) ?></small>
                                         </div>
                                         <div class="text-end">
-                                            <span class="badge bg-primary rounded-pill">$<?= number_format($order['total'], 2) ?></span>
+                                            <span class="badge bg-primary rounded-pill">
+                                                $<?= number_format($order['total_amount'], 2) ?>
+                                            </span>
                                             <br>
-                                            <small class="text-muted"><?= date('M j, Y g:i A', strtotime($order['created_at'])) ?></small>
+                                            <small class="text-muted">
+                                                <?= date('M j, Y g:i A', strtotime($order['created_at'])) ?>
+                                            </small>
                                         </div>
                                     </div>
                                 </li>

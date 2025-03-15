@@ -2,15 +2,15 @@
 
 namespace App\Controllers;
 
-class AuthController extends Controller
-{
-    public function __construct()
-    {
+class AuthController extends Controller {
+    private $userModel;
+
+    public function __construct() {
         parent::__construct();
+        $this->userModel = $this->model('User');
     }
 
-    public function login()
-    {
+    public function login() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = $_POST['email'];
             $password = $_POST['password'];
@@ -23,43 +23,45 @@ class AuthController extends Controller
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['email'] = $user['email'];
-                $_SESSION['role'] = $user['role'];  // Add role to session
+                $_SESSION['role'] = $user['role'];
                 header('Location: /');
                 exit;
-            } else {
-                $this->view('auth/login', ['error' => 'Invalid email or password']);
-                return;
             }
+
+            $this->view('auth/login', ['error' => 'Invalid email or password']);
+            return;
         }
 
         $this->view('auth/login');
     }
 
-    public function register()
-    {
+    public function register() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $username = $_POST['username'];
-            $email = $_POST['email'];
-            $password = $_POST['password'];
-            $confirmPassword = $_POST['confirm_password'];
-
-            if ($password !== $confirmPassword) {
+            if ($_POST['password'] !== $_POST['confirm_password']) {
                 $this->view('auth/register', ['error' => 'Passwords do not match']);
                 return;
             }
 
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
             try {
-                // Add role column to insert
-                $stmt = $this->pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 'user')");
-                $stmt->execute([$username, $email, $hashedPassword]);
+                $userData = [
+                    'username' => $_POST['username'],
+                    'email' => $_POST['email'],
+                    'password' => $_POST['password'],
+                    'role' => 'user'
+                ];
+
+                $this->userModel->create($userData);
                 
-                $_SESSION['user_id'] = $this->pdo->lastInsertId();
-                $_SESSION['username'] = $username;
-                $_SESSION['email'] = $email;
-                $_SESSION['role'] = 'user';  // Set default role
-                
+                // Log the user in
+                $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = ?");
+                $stmt->execute([$_POST['email']]);
+                $user = $stmt->fetch();
+
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['role'] = $user['role'];
+
                 header('Location: /');
                 exit;
             } catch (\PDOException $e) {
@@ -71,8 +73,7 @@ class AuthController extends Controller
         $this->view('auth/register');
     }
 
-    public function logout()
-    {
+    public function logout() {
         session_destroy();
         header('Location: /');
         exit;

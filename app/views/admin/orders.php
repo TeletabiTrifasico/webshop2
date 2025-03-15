@@ -26,7 +26,7 @@
                         <td><span class="badge bg-<?= getStatusColor($order['status']) ?>">
                             <?= ucfirst(htmlspecialchars($order['status'])) ?>
                         </span></td>
-                        <td><?= $order['created_at'] ?></td>
+                        <td><?= date('M j, Y g:i A', strtotime($order['created_at'])) ?></td>
                         <td>
                             <a href="/admin/orders/edit/<?= $order['id'] ?>" 
                                class="btn btn-sm btn-primary me-2">Edit</a>

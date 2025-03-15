@@ -3,45 +3,32 @@
 namespace App\Controllers;
 
 class AdminController extends Controller {
+    private $productModel;
+    private $userModel;
+    private $orderModel;
+
     public function __construct() {
         parent::__construct();
-        // Check if user is admin
         if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
             header('Location: /');
             exit;
         }
+        $this->productModel = $this->model('Product');
+        $this->userModel = $this->model('User');
+        $this->orderModel = $this->model('Order');
     }
 
     public function dashboard() {
-        // Get counts
-        $stmt = $this->pdo->query("SELECT COUNT(*) as products FROM products");
-        $productCount = $stmt->fetch()['products'];
+        $products = $this->productModel->getAll();
+        $users = $this->userModel->getAllExceptAdmin();
+        $orders = $this->orderModel->getAll();
 
-        $stmt = $this->pdo->query("SELECT COUNT(*) as users FROM users WHERE email != 'admin@webshop.com'");
-        $userCount = $stmt->fetch()['users'];
+        $productCount = count($products);
+        $userCount = count($users);
+        $orderCount = count($orders);
 
-        $stmt = $this->pdo->query("SELECT COUNT(*) as orders FROM orders");
-        $orderCount = $stmt->fetch()['orders'];
-
-        // Get 5 most recent orders
-        $stmt = $this->pdo->query("
-            SELECT o.id, o.total_amount as total, o.created_at, u.username 
-            FROM orders o 
-            JOIN users u ON o.user_id = u.id 
-            ORDER BY o.created_at DESC 
-            LIMIT 5
-        ");
-        $recentOrders = $stmt->fetchAll();
-
-        // Get 5 most recent users
-        $stmt = $this->pdo->query("
-            SELECT username, created_at 
-            FROM users 
-            WHERE email != 'admin@webshop.com' 
-            ORDER BY created_at DESC 
-            LIMIT 5
-        ");
-        $recentUsers = $stmt->fetchAll();
+        $recentOrders = array_slice($orders, 0, 5);
+        $recentUsers = array_slice($users, 0, 5);
 
         $this->view('admin/dashboard', [
             'productCount' => $productCount,
@@ -52,171 +39,92 @@ class AdminController extends Controller {
         ]);
     }
 
-    // Product Management
     public function products() {
-        $stmt = $this->pdo->query("SELECT * FROM products ORDER BY created_at DESC");
-        $products = $stmt->fetchAll();
+        $products = $this->productModel->getAll();
         $this->view('admin/products', ['products' => $products]);
     }
 
     public function createProduct() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $name = $_POST['name'];
-            $description = $_POST['description'];
-            $price = $_POST['price'];
+            $uploadResult = $this->handleImageUpload();
             
-            // Create upload directory if it doesn't exist
-            $uploadDir = __DIR__ . '/../../public/images/products';
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
-
-            // Handle image upload
-            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $fileInfo = pathinfo($_FILES['image']['name']);
-                $extension = strtolower($fileInfo['extension']);
-                
-                // Validate file extension
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-                if (!in_array($extension, $allowedExtensions)) {
-                    $this->view('admin/product-form', [
-                        'error' => 'Invalid file type. Only JPG, PNG and GIF are allowed.',
-                        'product' => [
-                            'name' => $name,
-                            'description' => $description,
-                            'price' => $price
-                        ]
-                    ]);
-                    return;
-                }
-
-                // Generate unique filename
-                $filename = uniqid() . '.' . $extension;
-                $uploadPath = $uploadDir . '/' . $filename;
-                $imageUrl = '/images/products/' . $filename;
-
-                // Move uploaded file
-                if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
-                    try {
-                        $stmt = $this->pdo->prepare(
-                            "INSERT INTO products (name, description, price, image) VALUES (?, ?, ?, ?)"
-                        );
-                        $stmt->execute([$name, $description, $price, $imageUrl]);
-
-                        header('Location: /admin/products');
-                        exit;
-                    } catch (\PDOException $e) {
-                        // Remove uploaded file if database insert fails
-                        unlink($uploadPath);
-                        throw $e;
-                    }
-                } else {
-                    $this->view('admin/product-form', [
-                        'error' => 'Failed to upload image. Please try again.',
-                        'product' => [
-                            'name' => $name,
-                            'description' => $description,
-                            'price' => $price
-                        ]
-                    ]);
-                    return;
-                }
-            } else {
+            if (isset($uploadResult['error'])) {
                 $this->view('admin/product-form', [
-                    'error' => 'Please select an image file.',
-                    'product' => [
-                        'name' => $name,
-                        'description' => $description,
-                        'price' => $price
-                    ]
+                    'error' => $uploadResult['error'],
+                    'product' => $_POST
                 ]);
                 return;
             }
+
+            $productData = [
+                'name' => $_POST['name'],
+                'description' => $_POST['description'],
+                'price' => $_POST['price'],
+                'image' => $uploadResult['imageUrl']
+            ];
+
+            try {
+                $this->productModel->create($productData);
+                header('Location: /admin/products');
+                exit;
+            } catch (\Exception $e) {
+                $this->view('admin/product-form', [
+                    'error' => 'Failed to create product',
+                    'product' => $_POST
+                ]);
+            }
         }
-        
+
         $this->view('admin/product-form');
     }
 
     public function editProduct($id) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $name = $_POST['name'];
-            $description = $_POST['description'];
-            $price = $_POST['price'];
-            
-            $uploadDir = __DIR__ . '/../../public/images/products';
-            if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0777, true);
-            }
+            $productData = [
+                'name' => $_POST['name'],
+                'description' => $_POST['description'],
+                'price' => $_POST['price']
+            ];
 
-            // If a new image was uploaded
+            // Handle image upload if new image is provided
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-                $fileInfo = pathinfo($_FILES['image']['name']);
-                $extension = strtolower($fileInfo['extension']);
+                $uploadResult = $this->handleImageUpload();
                 
-                // Validate file extension
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-                if (!in_array($extension, $allowedExtensions)) {
+                if (isset($uploadResult['error'])) {
                     $this->view('admin/product-form', [
-                        'error' => 'Invalid file type. Only JPG, PNG and GIF are allowed.',
-                        'product' => [
-                            'id' => $id,
-                            'name' => $name,
-                            'description' => $description,
-                            'price' => $price
-                        ]
+                        'error' => $uploadResult['error'],
+                        'product' => array_merge($_POST, ['id' => $id])
                     ]);
                     return;
                 }
+                
+                $productData['image'] = $uploadResult['imageUrl'];
+            }
 
-                $filename = uniqid() . '.' . $extension;
-                $uploadPath = $uploadDir . '/' . $filename;
-                $imageUrl = '/images/products/' . $filename;
-
-                // Get old image to delete it later
-                $stmt = $this->pdo->prepare("SELECT image FROM products WHERE id = ?");
-                $stmt->execute([$id]);
-                $oldImage = $stmt->fetch()['image'];
-
-                if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
-                    try {
-                        $stmt = $this->pdo->prepare(
-                            "UPDATE products SET name = ?, description = ?, price = ?, image = ? WHERE id = ?"
-                        );
-                        $stmt->execute([$name, $description, $price, $imageUrl, $id]);
-
-                        // Delete old image if it exists
-                        if ($oldImage && file_exists(__DIR__ . '/../../public' . $oldImage)) {
-                            unlink(__DIR__ . '/../../public' . $oldImage);
-                        }
-
-                        header('Location: /admin/products');
-                        exit;
-                    } catch (\PDOException $e) {
-                        unlink($uploadPath);
-                        throw $e;
-                    }
-                }
-            } else {
-                // Update without changing the image
-                $stmt = $this->pdo->prepare(
-                    "UPDATE products SET name = ?, description = ?, price = ? WHERE id = ?"
-                );
-                $stmt->execute([$name, $description, $price, $id]);
+            try {
+                $this->productModel->update($id, $productData);
                 header('Location: /admin/products');
                 exit;
+            } catch (\Exception $e) {
+                $this->view('admin/product-form', [
+                    'error' => 'Failed to update product',
+                    'product' => array_merge($_POST, ['id' => $id])
+                ]);
+                return;
             }
         }
 
-        $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
-        $stmt->execute([$id]);
-        $product = $stmt->fetch();
-        
+        $product = $this->productModel->getById($id);
+        if (!$product) {
+            header('Location: /admin/products');
+            exit;
+        }
+
         $this->view('admin/product-form', ['product' => $product]);
     }
 
     public function deleteProduct($id) {
-        $stmt = $this->pdo->prepare("DELETE FROM products WHERE id = ?");
-        $stmt->execute([$id]);
+        $this->productModel->delete($id);
 
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
             header('Content-Type: application/json');
@@ -228,57 +136,55 @@ class AdminController extends Controller {
         exit;
     }
 
-    // User Management
     public function users() {
-        $stmt = $this->pdo->query("SELECT * FROM users WHERE email != 'admin@webshop.com' ORDER BY created_at DESC");
-        $users = $stmt->fetchAll();
+        $users = $this->userModel->getAllExceptAdmin();
         $this->view('admin/users', ['users' => $users]);
     }
 
     public function createUser() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $username = $_POST['username'];
-            $email = $_POST['email'];
-            $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-            $role = $_POST['role'];
+            $userData = [
+                'username' => $_POST['username'],
+                'email' => $_POST['email'],
+                'password' => password_hash($_POST['password'], PASSWORD_DEFAULT),
+                'role' => $_POST['role']
+            ];
 
             try {
-                $stmt = $this->pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$username, $email, $password, $role]);
+                $this->userModel->create($userData);
                 header('Location: /admin/users');
                 exit;
-            } catch (\PDOException $e) {
+            } catch (\Exception $e) {
                 $this->view('admin/user-form', ['error' => 'Email already exists']);
-                return;
             }
         }
+
         $this->view('admin/user-form');
     }
 
     public function editUser($id) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $username = $_POST['username'];
-            $email = $_POST['email'];
-            $role = $_POST['role'];
+            $userData = [
+                'username' => $_POST['username'],
+                'email' => $_POST['email'],
+                'role' => $_POST['role']
+            ];
 
             try {
-                $stmt = $this->pdo->prepare("UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?");
-                $stmt->execute([$username, $email, $role, $id]);
+                $this->userModel->update($id, $userData);
                 header('Location: /admin/users');
                 exit;
-            } catch (\PDOException $e) {
-                $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = ?");
-                $stmt->execute([$id]);
-                $user = $stmt->fetch();
-                $this->view('admin/user-form', ['user' => $user, 'error' => 'Email already exists']);
+            } catch (\Exception $e) {
+                $user = $this->userModel->getById($id);
+                $this->view('admin/user-form', [
+                    'error' => 'Email already exists',
+                    'user' => array_merge($user, $_POST)
+                ]);
                 return;
             }
         }
 
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE id = ?");
-        $stmt->execute([$id]);
-        $user = $stmt->fetch();
-
+        $user = $this->userModel->getById($id);
         if (!$user) {
             header('Location: /admin/users');
             exit;
@@ -290,8 +196,7 @@ class AdminController extends Controller {
     public function updateUserRole($id) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $role = $_POST['role'];
-            $stmt = $this->pdo->prepare("UPDATE users SET role = ? WHERE id = ?");
-            $stmt->execute([$role, $id]);
+            $this->userModel->updateRole($id, $role);
 
             header('Content-Type: application/json');
             echo json_encode(['success' => true]);
@@ -300,8 +205,7 @@ class AdminController extends Controller {
     }
 
     public function deleteUser($id) {
-        $stmt = $this->pdo->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->execute([$id]);
+        $this->userModel->delete($id);
 
         if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
             header('Content-Type: application/json');
@@ -313,46 +217,22 @@ class AdminController extends Controller {
         exit;
     }
 
-    // Order Management
     public function orders() {
-        $stmt = $this->pdo->query("
-            SELECT o.*, u.username, u.email 
-            FROM orders o 
-            JOIN users u ON o.user_id = u.id 
-            ORDER BY o.created_at DESC
-        ");
-        $orders = $stmt->fetchAll();
+        $orders = $this->orderModel->getAllWithUserDetails();
         $this->view('admin/orders', ['orders' => $orders]);
     }
 
     public function editOrder($id) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status = $_POST['status'];
-            
-            $stmt = $this->pdo->prepare("UPDATE orders SET status = ? WHERE id = ?");
-            $stmt->execute([$status, $id]);
+            $this->orderModel->updateStatus($id, $status);
 
             header('Location: /admin/orders');
             exit;
         }
 
-        $stmt = $this->pdo->prepare("
-            SELECT o.*, u.username, u.email 
-            FROM orders o 
-            JOIN users u ON o.user_id = u.id 
-            WHERE o.id = ?
-        ");
-        $stmt->execute([$id]);
-        $order = $stmt->fetch();
-
-        $stmt = $this->pdo->prepare("
-            SELECT oi.*, p.name 
-            FROM order_items oi 
-            JOIN products p ON oi.product_id = p.id 
-            WHERE oi.order_id = ?
-        ");
-        $stmt->execute([$id]);
-        $orderItems = $stmt->fetchAll();
+        $order = $this->orderModel->getByIdWithUserDetails($id);
+        $orderItems = $this->orderModel->getOrderItems($id);
 
         $this->view('admin/order-form', [
             'order' => $order,
@@ -361,34 +241,47 @@ class AdminController extends Controller {
     }
 
     public function viewOrder($id) {
-        // Get order details with user information
-        $stmt = $this->pdo->prepare("
-            SELECT o.*, u.username, u.email 
-            FROM orders o 
-            JOIN users u ON o.user_id = u.id 
-            WHERE o.id = ?
-        ");
-        $stmt->execute([$id]);
-        $order = $stmt->fetch();
+        $order = $this->orderModel->getByIdWithUserDetails($id);
 
         if (!$order) {
             header('Location: /admin/orders');
             exit;
         }
 
-        // Get order items with product details
-        $stmt = $this->pdo->prepare("
-            SELECT oi.*, p.name, p.image 
-            FROM order_items oi 
-            JOIN products p ON oi.product_id = p.id 
-            WHERE oi.order_id = ?
-        ");
-        $stmt->execute([$id]);
-        $orderItems = $stmt->fetchAll();
+        $orderItems = $this->orderModel->getOrderItems($id);
 
         $this->view('admin/order-details', [
             'order' => $order,
             'orderItems' => $orderItems
         ]);
+    }
+
+    private function handleImageUpload() {
+        $uploadDir = __DIR__ . '/../../public/images/products';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $fileInfo = pathinfo($_FILES['image']['name']);
+            $extension = strtolower($fileInfo['extension']);
+            
+            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+            if (!in_array($extension, $allowedExtensions)) {
+                return ['error' => 'Invalid file type. Only JPG, PNG and GIF are allowed.'];
+            }
+
+            $filename = uniqid() . '.' . $extension;
+            $uploadPath = $uploadDir . '/' . $filename;
+            $imageUrl = '/images/products/' . $filename;
+
+            if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
+                return ['imageUrl' => $imageUrl];
+            }
+
+            return ['error' => 'Failed to upload image'];
+        }
+
+        return ['error' => 'No image uploaded'];
     }
 }
