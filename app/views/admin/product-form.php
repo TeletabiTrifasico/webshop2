@@ -7,6 +7,12 @@
                 <div class="card-header">
                     <h2 class="mb-0"><?= isset($product) ? 'Edit Product' : 'Add New Product' ?></h2>
                 </div>
+                <?php if (isset($error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <?= $error ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
                 <div class="card-body">
                     <form action="<?= isset($product) ? "/admin/products/edit/{$product['id']}" : "/admin/products/create" ?>" 
                           method="POST" 

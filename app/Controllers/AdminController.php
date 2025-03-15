@@ -64,16 +64,76 @@ class AdminController extends Controller {
             $name = $_POST['name'];
             $description = $_POST['description'];
             $price = $_POST['price'];
-            $image = '/images/products/' . $_FILES['image']['name'];
+            
+            // Create upload directory if it doesn't exist
+            $uploadDir = __DIR__ . '/../../public/images/products';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
 
-            move_uploaded_file($_FILES['image']['tmp_name'], __DIR__ . '/../../public' . $image);
+            // Handle image upload
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $fileInfo = pathinfo($_FILES['image']['name']);
+                $extension = strtolower($fileInfo['extension']);
+                
+                // Validate file extension
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+                if (!in_array($extension, $allowedExtensions)) {
+                    $this->view('admin/product-form', [
+                        'error' => 'Invalid file type. Only JPG, PNG and GIF are allowed.',
+                        'product' => [
+                            'name' => $name,
+                            'description' => $description,
+                            'price' => $price
+                        ]
+                    ]);
+                    return;
+                }
 
-            $stmt = $this->pdo->prepare("INSERT INTO products (name, description, price, image) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$name, $description, $price, $image]);
+                // Generate unique filename
+                $filename = uniqid() . '.' . $extension;
+                $uploadPath = $uploadDir . '/' . $filename;
+                $imageUrl = '/images/products/' . $filename;
 
-            header('Location: /admin/products');
-            exit;
+                // Move uploaded file
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
+                    try {
+                        $stmt = $this->pdo->prepare(
+                            "INSERT INTO products (name, description, price, image) VALUES (?, ?, ?, ?)"
+                        );
+                        $stmt->execute([$name, $description, $price, $imageUrl]);
+
+                        header('Location: /admin/products');
+                        exit;
+                    } catch (\PDOException $e) {
+                        // Remove uploaded file if database insert fails
+                        unlink($uploadPath);
+                        throw $e;
+                    }
+                } else {
+                    $this->view('admin/product-form', [
+                        'error' => 'Failed to upload image. Please try again.',
+                        'product' => [
+                            'name' => $name,
+                            'description' => $description,
+                            'price' => $price
+                        ]
+                    ]);
+                    return;
+                }
+            } else {
+                $this->view('admin/product-form', [
+                    'error' => 'Please select an image file.',
+                    'product' => [
+                        'name' => $name,
+                        'description' => $description,
+                        'price' => $price
+                    ]
+                ]);
+                return;
+            }
         }
+        
         $this->view('admin/product-form');
     }
 
@@ -83,19 +143,68 @@ class AdminController extends Controller {
             $description = $_POST['description'];
             $price = $_POST['price'];
             
-            if (!empty($_FILES['image']['name'])) {
-                $image = '/images/products/' . $_FILES['image']['name'];
-                move_uploaded_file($_FILES['image']['tmp_name'], __DIR__ . '/../../public' . $image);
-                
-                $stmt = $this->pdo->prepare("UPDATE products SET name = ?, description = ?, price = ?, image = ? WHERE id = ?");
-                $stmt->execute([$name, $description, $price, $image, $id]);
-            } else {
-                $stmt = $this->pdo->prepare("UPDATE products SET name = ?, description = ?, price = ? WHERE id = ?");
-                $stmt->execute([$name, $description, $price, $id]);
+            $uploadDir = __DIR__ . '/../../public/images/products';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
             }
 
-            header('Location: /admin/products');
-            exit;
+            // If a new image was uploaded
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $fileInfo = pathinfo($_FILES['image']['name']);
+                $extension = strtolower($fileInfo['extension']);
+                
+                // Validate file extension
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+                if (!in_array($extension, $allowedExtensions)) {
+                    $this->view('admin/product-form', [
+                        'error' => 'Invalid file type. Only JPG, PNG and GIF are allowed.',
+                        'product' => [
+                            'id' => $id,
+                            'name' => $name,
+                            'description' => $description,
+                            'price' => $price
+                        ]
+                    ]);
+                    return;
+                }
+
+                $filename = uniqid() . '.' . $extension;
+                $uploadPath = $uploadDir . '/' . $filename;
+                $imageUrl = '/images/products/' . $filename;
+
+                // Get old image to delete it later
+                $stmt = $this->pdo->prepare("SELECT image FROM products WHERE id = ?");
+                $stmt->execute([$id]);
+                $oldImage = $stmt->fetch()['image'];
+
+                if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
+                    try {
+                        $stmt = $this->pdo->prepare(
+                            "UPDATE products SET name = ?, description = ?, price = ?, image = ? WHERE id = ?"
+                        );
+                        $stmt->execute([$name, $description, $price, $imageUrl, $id]);
+
+                        // Delete old image if it exists
+                        if ($oldImage && file_exists(__DIR__ . '/../../public' . $oldImage)) {
+                            unlink(__DIR__ . '/../../public' . $oldImage);
+                        }
+
+                        header('Location: /admin/products');
+                        exit;
+                    } catch (\PDOException $e) {
+                        unlink($uploadPath);
+                        throw $e;
+                    }
+                }
+            } else {
+                // Update without changing the image
+                $stmt = $this->pdo->prepare(
+                    "UPDATE products SET name = ?, description = ?, price = ? WHERE id = ?"
+                );
+                $stmt->execute([$name, $description, $price, $id]);
+                header('Location: /admin/products');
+                exit;
+            }
         }
 
         $stmt = $this->pdo->prepare("SELECT * FROM products WHERE id = ?");
