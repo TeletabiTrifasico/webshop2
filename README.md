@@ -1,5 +1,3 @@
-# README.md
-
 # Webshop Project
 
 ## Project Overview
@@ -137,6 +135,31 @@ Note: The default password for all sample users is 'password'
 - Add products to cart
 - View and modify cart contents
 - Complete purchase through checkout
+
+## API Endpoints
+The application provides JSON API endpoints for accessing data:
+
+### Get All Products
+```
+GET /api/products
+```
+Returns a list of all products.
+
+### Get Single Product
+```
+GET /api/products/{id}
+```
+Example:
+```
+GET /api/products/5
+```
+Returns details of a specific product.
+
+### Get Cart Contents
+```
+GET /api/cart
+```
+Returns the current user's cart contents. Requires authentication.
 
 ## Security Features
 - Password hashing

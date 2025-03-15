@@ -78,6 +78,22 @@ try {
                 $controller->removeItem($productId);
             }
             break;
+
+        // API Routes
+        case '/api/products':
+            $controller = new \App\Controllers\ApiController();
+            $controller->products();
+            break;
+
+        case (preg_match('/^\/api\/products\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\ApiController();
+            $controller->product($matches[1]);
+            break;
+
+        case '/api/cart':
+            $controller = new \App\Controllers\ApiController();
+            $controller->cart();
+            break;
             
         default:
             if (preg_match('/^\/products\/(\d+)$/', $path, $matches)) {
