@@ -79,6 +79,13 @@ try {
             }
             break;
 
+        case '/cart/checkout':
+            $controller = new \App\Controllers\CartController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $controller->processCheckout();
+            }
+            break;
+
         // API Routes
         case '/api/products':
             $controller = new \App\Controllers\ApiController();

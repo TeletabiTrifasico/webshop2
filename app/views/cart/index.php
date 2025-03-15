@@ -70,9 +70,37 @@
 
         <div class="d-flex justify-content-between mt-4">
             <a href="/products" class="btn btn-secondary">Continue Shopping</a>
-            <a href="/checkout" class="btn btn-success">Proceed to Checkout</a>
+            <button onclick="processCheckout()" class="btn btn-success">Proceed to Checkout</button>
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+function processCheckout() {
+    if (confirm('Are you sure you want to complete your order?')) {
+        fetch('/cart/checkout', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('An error occurred while processing your order.', 'error');
+        });
+    }
+}
+</script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

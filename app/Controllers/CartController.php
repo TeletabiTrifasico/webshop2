@@ -113,4 +113,76 @@ class CartController extends Controller {
     public function checkout() {
         require_once '../app/views/orders/checkout.php';
     }
+
+    public function processCheckout() {
+        if (!isset($_SESSION['user_id'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Please login to complete your order']);
+            exit;
+        }
+
+        try {
+            // Start transaction
+            $this->pdo->beginTransaction();
+
+            // Create order
+            $stmt = $this->pdo->prepare("
+                INSERT INTO orders (user_id, total_amount, status) 
+                VALUES (?, ?, 'pending')
+            ");
+
+            // Calculate total amount
+            $total = 0;
+            foreach ($_SESSION['cart'] as $item) {
+                $productStmt = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
+                $productStmt->execute([$item['productId']]);
+                $product = $productStmt->fetch();
+                $total += $product['price'] * $item['quantity'];
+            }
+
+            $stmt->execute([$_SESSION['user_id'], $total]);
+            $orderId = $this->pdo->lastInsertId();
+
+            // Create order items
+            $stmt = $this->pdo->prepare("
+                INSERT INTO order_items (order_id, product_id, quantity, price) 
+                VALUES (?, ?, ?, ?)
+            ");
+
+            foreach ($_SESSION['cart'] as $item) {
+                $productStmt = $this->pdo->prepare("SELECT price FROM products WHERE id = ?");
+                $productStmt->execute([$item['productId']]);
+                $product = $productStmt->fetch();
+                
+                $stmt->execute([
+                    $orderId,
+                    $item['productId'],
+                    $item['quantity'],
+                    $product['price']
+                ]);
+            }
+
+            // Clear the cart
+            $_SESSION['cart'] = [];
+            
+            // Commit transaction
+            $this->pdo->commit();
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Order completed successfully!'
+            ]);
+            exit;
+
+        } catch (\PDOException $e) {
+            $this->pdo->rollBack();
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'An error occurred while processing your order.'
+            ]);
+            exit;
+        }
+    }
 }
