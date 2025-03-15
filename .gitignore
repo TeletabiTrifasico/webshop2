@@ -18,5 +18,6 @@ Thumbs.db
 *.sqlite
 
 # Cache and temporary files
+/public/images/products
 /public/images/cache/*
 !public/images/cache/.gitkeep
