@@ -94,6 +94,68 @@ try {
             $controller = new \App\Controllers\ApiController();
             $controller->cart();
             break;
+
+        // Admin Routes
+        case '/admin':
+        case '/admin/dashboard':
+            $controller = new \App\Controllers\AdminController();
+            $controller->dashboard();
+            break;
+
+        case '/admin/products':
+            $controller = new \App\Controllers\AdminController();
+            $controller->products();
+            break;
+
+        case '/admin/products/create':
+            $controller = new \App\Controllers\AdminController();
+            $controller->createProduct();
+            break;
+
+        case (preg_match('/^\/admin\/products\/edit\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\AdminController();
+            $controller->editProduct($matches[1]);
+            break;
+
+        case (preg_match('/^\/admin\/products\/delete\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\AdminController();
+            $controller->deleteProduct($matches[1]);
+            break;
+
+        case '/admin/users':
+            $controller = new \App\Controllers\AdminController();
+            $controller->users();
+            break;
+
+        case '/admin/users/create':
+            $controller = new \App\Controllers\AdminController();
+            $controller->createUser();
+            break;
+
+        case (preg_match('/^\/admin\/users\/edit\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\AdminController();
+            $controller->editUser($matches[1]);
+            break;
+
+        case (preg_match('/^\/admin\/users\/delete\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\AdminController();
+            $controller->deleteUser($matches[1]);
+            break;
+
+        case '/admin/orders':
+            $controller = new \App\Controllers\AdminController();
+            $controller->orders();
+            break;
+
+        case (preg_match('/^\/admin\/orders\/view\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\AdminController();
+            $controller->viewOrder($matches[1]);
+            break;
+
+        case (preg_match('/^\/admin\/orders\/edit\/(\d+)$/', $path, $matches) ? true : false):
+            $controller = new \App\Controllers\AdminController();
+            $controller->editOrder($matches[1]);
+            break;
             
         default:
             if (preg_match('/^\/products\/(\d+)$/', $path, $matches)) {

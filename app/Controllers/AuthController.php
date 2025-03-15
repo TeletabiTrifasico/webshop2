@@ -22,6 +22,8 @@ class AuthController extends Controller
             if ($user && password_verify($password, $user['password'])) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['role'] = $user['role'];  // Add role to session
                 header('Location: /');
                 exit;
             } else {
@@ -49,11 +51,14 @@ class AuthController extends Controller
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
             try {
-                $stmt = $this->pdo->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
+                // Add role column to insert
+                $stmt = $this->pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 'user')");
                 $stmt->execute([$username, $email, $hashedPassword]);
                 
                 $_SESSION['user_id'] = $this->pdo->lastInsertId();
                 $_SESSION['username'] = $username;
+                $_SESSION['email'] = $email;
+                $_SESSION['role'] = 'user';  // Set default role
                 
                 header('Location: /');
                 exit;
