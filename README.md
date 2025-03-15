@@ -66,7 +66,7 @@ webshop/
 
 2. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/TeletabiTrifasico/webshop
 cd webshop
 ```
 
