@@ -61,14 +61,55 @@ webshop/
     └── index.php
 ```
 
-## Installation
-1. Clone the repository to your local machine
-2. Configure your web server (Apache/Nginx) to point to the `public` directory
-3. Create a MySQL database named `webshop_db`
-4. Import the SQL script from the Database Setup section below
-5. Ensure write permissions for `/public/images/products` directory
-6. Start your web server
-7. Access the application through your web browser
+## Docker Installation
+1. Install Docker Desktop for Windows from [Docker's official website](https://www.docker.com/products/docker-desktop/)
+
+2. Clone the repository:
+```bash
+git clone <repository-url>
+cd webshop
+```
+
+3. Build and start the Docker containers:
+```bash
+docker-compose up -d --build
+```
+
+4. The application will be available at:
+- Website: http://localhost:8088
+- Database: localhost:3307
+  - Username: webshopadmin
+  - Password: !webshopadmin2025
+  - Database: webshop_db
+
+### Docker Commands
+- Start containers: `docker-compose up -d`
+- Stop containers: `docker-compose down`
+- View logs: `docker-compose logs`
+- Rebuild containers: `docker-compose up -d --build`
+- Remove all containers and volumes: `docker-compose down -v`
+
+### Default Users
+- Admin User:
+  - Email: admin@webshop.com
+  - Password: password
+- Sample User:
+  - Email: john@example.com
+  - Password: password
+
+### Docker Container Details
+- Web Server: Apache 2.4 with PHP 8.0
+- Database: MySQL 8.0
+- Ports:
+  - Web: 8088 (http://localhost:8088)
+  - MySQL: 3307 (localhost:3307)
+
+### Troubleshooting
+If you encounter any issues:
+1. Check Docker logs: `docker-compose logs`
+2. Ensure ports 8088 and 3307 are not in use
+3. Try rebuilding containers: `docker-compose up -d --build`
+4. Clear all Docker data: `docker system prune -a --volumes`
 
 ## Database Setup
 Execute the following SQL script to set up and populate the database:
