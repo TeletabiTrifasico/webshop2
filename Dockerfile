@@ -1,7 +1,7 @@
 # Use PHP 8.0 Apache image
 FROM php:8.0-apache
 
-LABEL authors="Hugo Jimenez"
+LABEL authors="Hugo Jimenez Barrasa"
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
