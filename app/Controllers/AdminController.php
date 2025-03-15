@@ -23,25 +23,19 @@ class AdminController extends Controller {
         $users = $this->userModel->getAllExceptAdmin();
         $orders = $this->orderModel->getAll();
 
-        $productCount = count($products);
-        $userCount = count($users);
-        $orderCount = count($orders);
-
-        $recentOrders = array_slice($orders, 0, 5);
-        $recentUsers = array_slice($users, 0, 5);
-
         $this->view('admin/dashboard', [
-            'productCount' => $productCount,
-            'userCount' => $userCount,
-            'orderCount' => $orderCount,
-            'recentOrders' => $recentOrders,
-            'recentUsers' => $recentUsers
+            'productCount' => count($products),
+            'userCount' => count($users),
+            'orderCount' => count($orders),
+            'recentOrders' => array_slice($orders, 0, 5),
+            'recentUsers' => array_slice($users, 0, 5)
         ]);
     }
 
     public function products() {
-        $products = $this->productModel->getAll();
-        $this->view('admin/products', ['products' => $products]);
+        $this->view('admin/products', [
+            'products' => $this->productModel->getAll()
+        ]);
     }
 
     public function createProduct() {
@@ -56,15 +50,13 @@ class AdminController extends Controller {
                 return;
             }
 
-            $productData = [
-                'name' => $_POST['name'],
-                'description' => $_POST['description'],
-                'price' => $_POST['price'],
-                'image' => $uploadResult['imageUrl']
-            ];
-
             try {
-                $this->productModel->create($productData);
+                $this->productModel->create([
+                    'name' => $_POST['name'],
+                    'description' => $_POST['description'],
+                    'price' => $_POST['price'],
+                    'image' => $uploadResult['imageUrl']
+                ]);
                 header('Location: /admin/products');
                 exit;
             } catch (\Exception $e) {
@@ -86,10 +78,8 @@ class AdminController extends Controller {
                 'price' => $_POST['price']
             ];
 
-            // Handle image upload if new image is provided
             if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
                 $uploadResult = $this->handleImageUpload();
-                
                 if (isset($uploadResult['error'])) {
                     $this->view('admin/product-form', [
                         'error' => $uploadResult['error'],
@@ -97,7 +87,6 @@ class AdminController extends Controller {
                     ]);
                     return;
                 }
-                
                 $productData['image'] = $uploadResult['imageUrl'];
             }
 
@@ -125,20 +114,13 @@ class AdminController extends Controller {
 
     public function deleteProduct($id) {
         $this->productModel->delete($id);
-
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true]);
-            exit;
-        }
-
-        header('Location: /admin/products');
-        exit;
+        $this->jsonResponse(['success' => true]);
     }
 
     public function users() {
-        $users = $this->userModel->getAllExceptAdmin();
-        $this->view('admin/users', ['users' => $users]);
+        $this->view('admin/users', [
+            'users' => $this->userModel->getAllExceptAdmin()
+        ]);
     }
 
     public function createUser() {
@@ -218,25 +200,21 @@ class AdminController extends Controller {
     }
 
     public function orders() {
-        $orders = $this->orderModel->getAllWithUserDetails();
-        $this->view('admin/orders', ['orders' => $orders]);
+        $this->view('admin/orders', [
+            'orders' => $this->orderModel->getAllWithUserDetails()
+        ]);
     }
 
     public function editOrder($id) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $status = $_POST['status'];
-            $this->orderModel->updateStatus($id, $status);
-
+            $this->orderModel->updateStatus($id, $_POST['status']);
             header('Location: /admin/orders');
             exit;
         }
 
-        $order = $this->orderModel->getByIdWithUserDetails($id);
-        $orderItems = $this->orderModel->getOrderItems($id);
-
         $this->view('admin/order-form', [
-            'order' => $order,
-            'orderItems' => $orderItems
+            'order' => $this->orderModel->getByIdWithUserDetails($id),
+            'orderItems' => $this->orderModel->getOrderItems($id)
         ]);
     }
 
@@ -266,8 +244,7 @@ class AdminController extends Controller {
             $fileInfo = pathinfo($_FILES['image']['name']);
             $extension = strtolower($fileInfo['extension']);
             
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-            if (!in_array($extension, $allowedExtensions)) {
+            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'gif'])) {
                 return ['error' => 'Invalid file type. Only JPG, PNG and GIF are allowed.'];
             }
 
@@ -275,13 +252,21 @@ class AdminController extends Controller {
             $uploadPath = $uploadDir . '/' . $filename;
             $imageUrl = '/images/products/' . $filename;
 
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath)) {
-                return ['imageUrl' => $imageUrl];
-            }
-
-            return ['error' => 'Failed to upload image'];
+            return move_uploaded_file($_FILES['image']['tmp_name'], $uploadPath) 
+                ? ['imageUrl' => $imageUrl]
+                : ['error' => 'Failed to upload image'];
         }
 
         return ['error' => 'No image uploaded'];
+    }
+
+    private function jsonResponse($data) {
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+            header('Content-Type: application/json');
+            echo json_encode($data);
+            exit;
+        }
+        header('Location: ' . $_SERVER['HTTP_REFERER']);
+        exit;
     }
 }

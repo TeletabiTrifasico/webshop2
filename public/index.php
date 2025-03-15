@@ -11,180 +11,105 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Start session
 session_start();
 
-// Basic routing
 $request = $_SERVER['REQUEST_URI'];
-$path = parse_url($request, PHP_URL_PATH);
-$path = rtrim($path, '/');
+$path = rtrim(parse_url($request, PHP_URL_PATH), '/');
 
 try {
-    switch ($path) {
-        case '':
-        case '/':
-            $controller = new \App\Controllers\HomeController();
-            $controller->index();
-            break;
-            
-        case '/products':
-            $controller = new \App\Controllers\ProductController();
-            $controller->index();
-            break;
-            
-        case '/auth/login':
-            $controller = new \App\Controllers\AuthController();
-            $controller->login();
-            break;
-            
-        case '/auth/register':
-            $controller = new \App\Controllers\AuthController();
-            $controller->register();
-            break;
-            
-        case '/auth/logout':
-            $controller = new \App\Controllers\AuthController();
-            $controller->logout();
-            break;
-            
-        case '/cart':
-            $controller = new \App\Controllers\CartController();
-            $controller->index();
-            break;
-            
-        case '/cart/add':
-            $controller = new \App\Controllers\CartController();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : null;
-                $controller->addItem($productId);
-            } else {
-                header('Location: /products');
-            }
-            break;
+    // Main Routes
+    $mainRoutes = [
+        '' => ['HomeController', 'index'],
+        '/' => ['HomeController', 'index'],
+        '/products' => ['ProductController', 'index'],
+        '/cart' => ['CartController', 'index'],
+    ];
 
-        case '/cart/update':
-            $controller = new \App\Controllers\CartController();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : null;
-                $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : null;
-                $controller->updateQuantity($productId, $quantity);
-            }
-            break;
+    // Auth Routes
+    $authRoutes = [
+        '/auth/login' => ['AuthController', 'login'],
+        '/auth/register' => ['AuthController', 'register'],
+        '/auth/logout' => ['AuthController', 'logout'],
+    ];
 
-        case '/cart/remove':
-            $controller = new \App\Controllers\CartController();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $productId = isset($_POST['product_id']) ? (int)$_POST['product_id'] : null;
-                $controller->removeItem($productId);
-            }
-            break;
+    // Cart Routes
+    $cartRoutes = [
+        '/cart/add' => ['CartController', 'addItem'],
+        '/cart/update' => ['CartController', 'updateQuantity'],
+        '/cart/remove' => ['CartController', 'removeItem'],
+        '/cart/checkout' => ['CartController', 'processCheckout'],
+    ];
 
-        case '/cart/checkout':
-            $controller = new \App\Controllers\CartController();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $controller->processCheckout();
-            }
-            break;
+    // API Routes
+    $apiRoutes = [
+        '/api/products' => ['ApiController', 'products'],
+        '/api/cart' => ['ApiController', 'cart'],
+    ];
 
-        // API Routes
-        case '/api/products':
-            $controller = new \App\Controllers\ApiController();
-            $controller->products();
-            break;
+    // User Routes
+    $userRoutes = [
+        '/user/profile' => ['UserController', 'profile'],
+        '/user/profile/update' => ['UserController', 'updateProfile'],
+    ];
 
-        case (preg_match('/^\/api\/products\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\ApiController();
-            $controller->product($matches[1]);
-            break;
-
-        case '/api/cart':
-            $controller = new \App\Controllers\ApiController();
-            $controller->cart();
-            break;
-
-        // Admin Routes
-        case '/admin':
-        case '/admin/dashboard':
-            $controller = new \App\Controllers\AdminController();
-            $controller->dashboard();
-            break;
-
-        case '/admin/products':
-            $controller = new \App\Controllers\AdminController();
-            $controller->products();
-            break;
-
-        case '/admin/products/create':
-            $controller = new \App\Controllers\AdminController();
-            $controller->createProduct();
-            break;
-
-        case (preg_match('/^\/admin\/products\/edit\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\AdminController();
-            $controller->editProduct($matches[1]);
-            break;
-
-        case (preg_match('/^\/admin\/products\/delete\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\AdminController();
-            $controller->deleteProduct($matches[1]);
-            break;
-
-        case '/admin/users':
-            $controller = new \App\Controllers\AdminController();
-            $controller->users();
-            break;
-
-        case '/admin/users/create':
-            $controller = new \App\Controllers\AdminController();
-            $controller->createUser();
-            break;
-
-        case (preg_match('/^\/admin\/users\/edit\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\AdminController();
-            $controller->editUser($matches[1]);
-            break;
-
-        case (preg_match('/^\/admin\/users\/delete\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\AdminController();
-            $controller->deleteUser($matches[1]);
-            break;
-
-        case '/admin/orders':
-            $controller = new \App\Controllers\AdminController();
-            $controller->orders();
-            break;
-
-        case (preg_match('/^\/admin\/orders\/view\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\AdminController();
-            $controller->viewOrder($matches[1]);
-            break;
-
-        case (preg_match('/^\/admin\/orders\/edit\/(\d+)$/', $path, $matches) ? true : false):
-            $controller = new \App\Controllers\AdminController();
-            $controller->editOrder($matches[1]);
-            break;
-
-        case '/user/profile':
-            $controller = new \App\Controllers\UserController();
-            $controller->profile();
-            break;
-
-        case '/user/profile/update':
-            $controller = new \App\Controllers\UserController();
-            $controller->updateProfile();
-            break;
-            
-        default:
-            if (preg_match('/^\/products\/(\d+)$/', $path, $matches)) {
-                $controller = new \App\Controllers\ProductController();
-                $controller->detail($matches[1]);
-                break;
-            }
-            
-            http_response_code(404);
-            require __DIR__ . '/../app/views/404.php';
-            break;
+    // Find route in static routes first
+    $allRoutes = array_merge($mainRoutes, $authRoutes, $cartRoutes, $apiRoutes, $userRoutes);
+    if (isset($allRoutes[$path])) {
+        [$controllerName, $method] = $allRoutes[$path];
+        $controller = new ("\\App\\Controllers\\$controllerName")();
+        
+        if (in_array($path, array_keys($cartRoutes)) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: /products');
+            exit;
+        }
+        
+        $controller->$method();
+        exit;
     }
+
+    // Dynamic Routes
+    $dynamicRoutes = [
+        '/^\/products\/(\d+)$/' => ['ProductController', 'detail'],
+        '/^\/api\/products\/(\d+)$/' => ['ApiController', 'product'],
+        '/^\/admin\/products\/edit\/(\d+)$/' => ['AdminController', 'editProduct'],
+        '/^\/admin\/products\/delete\/(\d+)$/' => ['AdminController', 'deleteProduct'],
+        '/^\/admin\/users\/edit\/(\d+)$/' => ['AdminController', 'editUser'],
+        '/^\/admin\/users\/delete\/(\d+)$/' => ['AdminController', 'deleteUser'],
+        '/^\/admin\/orders\/view\/(\d+)$/' => ['AdminController', 'viewOrder'],
+        '/^\/admin\/orders\/edit\/(\d+)$/' => ['AdminController', 'editOrder'],
+    ];
+
+    foreach ($dynamicRoutes as $pattern => [$controllerName, $method]) {
+        if (preg_match($pattern, $path, $matches)) {
+            $controller = new ("\\App\\Controllers\\$controllerName")();
+            $controller->$method($matches[1]);
+            exit;
+        }
+    }
+
+    // Admin Routes (static)
+    $adminRoutes = [
+        '/admin' => ['dashboard'],
+        '/admin/dashboard' => ['dashboard'],
+        '/admin/products' => ['products'],
+        '/admin/products/create' => ['createProduct'],
+        '/admin/users' => ['users'],
+        '/admin/users/create' => ['createUser'],
+        '/admin/orders' => ['orders'],
+    ];
+
+    foreach ($adminRoutes as $adminPath => $method) {
+        if ($path === $adminPath) {
+            $controller = new \App\Controllers\AdminController();
+            $controller->{$method[0]}();
+            exit;
+        }
+    }
+
+    // If no route matches, show 404
+    http_response_code(404);
+    require __DIR__ . '/../app/views/404.php';
+
 } catch (Exception $e) {
     error_log($e->getMessage());
     http_response_code(500);
