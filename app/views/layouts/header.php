@@ -27,7 +27,9 @@
                 <ul class="navbar-nav">
                     <?php if (isset($_SESSION['user_id'])): ?>
                         <li class="nav-item">
-                            <span class="nav-link">Welcome, <?= htmlspecialchars($_SESSION['username']) ?></span>
+                            <a href="/user/profile" class="nav-link">
+                                <?= htmlspecialchars($_SESSION['username']) ?>
+                            </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="/cart">

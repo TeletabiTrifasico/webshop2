@@ -163,6 +163,16 @@ try {
             $controller = new \App\Controllers\AdminController();
             $controller->editOrder($matches[1]);
             break;
+
+        case '/user/profile':
+            $controller = new \App\Controllers\UserController();
+            $controller->profile();
+            break;
+
+        case '/user/profile/update':
+            $controller = new \App\Controllers\UserController();
+            $controller->updateProfile();
+            break;
             
         default:
             if (preg_match('/^\/products\/(\d+)$/', $path, $matches)) {
