@@ -1,0 +1,83 @@
+// Import Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+// Custom variables
+$primary-color: #0d6efd;
+$secondary-color: #6c757d;
+$success-color: #198754;
+$danger-color: #dc3545;
+
+// Global styles
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+// Navigation styles
+.navbar {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  
+  .nav-link {
+    color: rgba(255,255,255,0.85) !important;
+    
+    &:hover, &.active {
+      color: #fff !important;
+    }
+  }
+}
+
+// Cart badge
+.cart-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+// Product cards
+.card {
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: translateY(-5px);
+  }
+  
+  .card-img-top {
+    height: 200px;
+    object-fit: cover;
+  }
+}
+
+// Toast notifications
+.toast-container {
+  z-index: 1050;
+  
+  .toast {
+    min-width: 250px;
+    
+    &.success {
+      background-color: $success-color;
+      color: white;
+    }
+    
+    &.error {
+      background-color: $danger-color;
+      color: white;
+    }
+  }
+}
+
+// Animations
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
