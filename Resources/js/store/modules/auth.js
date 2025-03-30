@@ -32,12 +32,38 @@ export default {
       commit('setError', null)
       
       try {
-        const response = await axios.post('/auth/login', credentials)
-        commit('setUser', response.data.user)
-        return { success: true }
+        const response = await axios.post('/api/auth/login', credentials)
+        if (response.data.success) {
+          commit('setUser', response.data.user)
+          return { success: true }
+        } else {
+          throw new Error(response.data.error)
+        }
       } catch (error) {
-        commit('setError', error.response?.data?.message || 'Login failed')
-        return { success: false, error: error.response?.data?.message }
+        const errorMessage = error.response?.data?.error || 'Login failed'
+        commit('setError', errorMessage)
+        return { success: false, error: errorMessage }
+      } finally {
+        commit('setLoading', false)
+      }
+    },
+
+    async register({ commit }, userData) {
+      commit('setLoading', true)
+      commit('setError', null)
+      
+      try {
+        const response = await axios.post('/api/auth/register', userData)
+        if (response.data.success) {
+          commit('setUser', response.data.user)
+          return { success: true }
+        } else {
+          throw new Error(response.data.error)
+        }
+      } catch (error) {
+        const errorMessage = error.response?.data?.error || 'Registration failed'
+        commit('setError', errorMessage)
+        return { success: false, error: errorMessage }
       } finally {
         commit('setLoading', false)
       }
@@ -45,9 +71,12 @@ export default {
 
     async logout({ commit }) {
       try {
-        await axios.post('/auth/logout')
-      } finally {
+        await axios.post('/api/auth/logout')
         commit('setUser', null)
+        return { success: true }
+      } catch (error) {
+        console.error('Logout error:', error)
+        return { success: false }
       }
     }
   }

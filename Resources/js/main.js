@@ -4,17 +4,16 @@ import router from './router'
 import store from './store'
 import axios from 'axios'
 
+// Configure axios defaults
+axios.defaults.baseURL = window.location.origin
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
+
 const app = createApp(App)
 
-// Enable devtools in development
-if (process.env.NODE_ENV === 'development') {
-    app.config.devtools = true
-}
-
-// Configure axios
-axios.defaults.baseURL = '' // Remove any baseURL to use relative paths
+// Make axios available in components
 app.config.globalProperties.$axios = axios
 
 app.use(router)
 app.use(store)
+
 app.mount('#app')

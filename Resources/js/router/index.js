@@ -12,9 +12,14 @@ const routes = [
     component: () => import('@/components/products/Index.vue')
   },
   {
-    path: '/products/:id',
-    name: 'product-details',
-    component: () => import('@/components/products/Show.vue')
+    path: '/auth/login',
+    name: 'login',
+    component: () => import('@/components/auth/Login.vue')
+  },
+  {
+    path: '/auth/register',
+    name: 'register',
+    component: () => import('@/components/auth/Register.vue')
   }
 ]
 

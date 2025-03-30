@@ -30,7 +30,10 @@ session_start();
 
 // API Routes configuration
 $apiRoutes = [
-    '/api/products/latest' => ['Api\ProductController', 'latest'],  // This must be first
+    '/api/auth/login' => ['Api\AuthController', 'login'],
+    '/api/auth/register' => ['Api\AuthController', 'register'],
+    '/api/auth/logout' => ['Api\AuthController', 'logout'],
+    '/api/products/latest' => ['Api\ProductController', 'latest'],
     '/api/products/(\d+)' => ['Api\ProductController', 'show'],
     '/api/products' => ['Api\ProductController', 'index'],
 ];

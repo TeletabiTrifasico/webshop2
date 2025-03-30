@@ -1,4 +1,22 @@
 {
+  "js/components/auth/Login.vue": {
+    "file": "chunks/Login.BJz4fawG.js",
+    "name": "Login",
+    "src": "js/components/auth/Login.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "js/main.js"
+    ]
+  },
+  "js/components/auth/Register.vue": {
+    "file": "chunks/Register.Cc4CZHfB.js",
+    "name": "Register",
+    "src": "js/components/auth/Register.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "js/main.js"
+    ]
+  },
   "js/components/home/index.vue": {
     "file": "chunks/index.BjkIZKri.js",
     "name": "index",
@@ -8,25 +26,16 @@
       "js/main.js"
     ]
   },
-  "js/components/products/Show.vue": {
-    "file": "chunks/Show.BpfkE8rK.js",
-    "name": "Show",
-    "src": "js/components/products/Show.vue",
-    "isDynamicEntry": true,
-    "imports": [
-      "js/main.js"
-    ]
-  },
-  "js/components/products/index.vue": {
-    "file": "chunks/index.BCR0fwK_.js",
-    "name": "index",
-    "src": "js/components/products/index.vue",
+  "js/components/products/Index.vue": {
+    "file": "chunks/Index.BDHwXqfj.js",
+    "name": "Index",
+    "src": "js/components/products/Index.vue",
     "isDynamicEntry": true,
     "imports": [
       "js/main.js"
     ],
     "css": [
-      "assets/index.Dee_PWBt.css"
+      "assets/Index.BCVPf33C.css"
     ]
   },
   "js/main.js": {
@@ -36,8 +45,9 @@
     "isEntry": true,
     "dynamicImports": [
       "js/components/home/index.vue",
-      "js/components/products/index.vue",
-      "js/components/products/Show.vue"
+      "js/components/products/Index.vue",
+      "js/components/auth/Login.vue",
+      "js/components/auth/Register.vue"
     ],
     "css": [
       "assets/main.BrX0nfuI.css"
