@@ -10,8 +10,8 @@
 
 <script>
 import { mapState, mapActions } from 'vuex'
-import AppHeader from './AppHeader.vue'
-import AppFooter from './AppFooter.vue'
+import AppHeader from './components/layouts/AppHeader.vue'
+import AppFooter from './components/layouts/AppFooter.vue'
 
 export default {
   name: 'App',
@@ -21,38 +21,9 @@ export default {
     AppFooter
   },
   
-  data() {
-    return {
-      appName: process.env.VUE_APP_NAME || 'Webshop'
-    }
-  },
-
   computed: {
     ...mapState('auth', ['user']),
-    ...mapState('cart', ['count as cartCount']),
-    
-    isAuthenticated() {
-      return !!this.user
-    },
-    
-    currentYear() {
-      return new Date().getFullYear()
-    }
-  },
-
-  methods: {
-    ...mapActions('auth', ['logout']),
-    
-    async handleLogout() {
-      await this.logout()
-      this.$router.push('/auth/login')
-    }
-  },
-
-  created() {
-    if (this.isAuthenticated) {
-      this.$store.dispatch('cart/fetchCart')
-    }
+    ...mapState('cart', ['count as cartCount'])
   }
 }
 </script>

@@ -37,6 +37,7 @@ const routes = [
     component: () => import('@/components/user/Profile.vue'),
     meta: { requiresAuth: true }
   },
+  // Add a catch-all route for 404
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
@@ -47,17 +48,6 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
-})
-
-// Navigation guard
-router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('user')
-  
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ name: 'login' })
-  } else {
-    next()
-  }
 })
 
 export default router
