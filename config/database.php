@@ -1,9 +1,9 @@
 <?php
 
-$host = getenv('DB_HOST') ?: 'db'; 
-$dbname = getenv('DB_NAME') ?: 'webshop_db';
-$username = getenv('DB_USER') ?: 'webshopadmin';
-$password = getenv('DB_PASSWORD') ?: '!webshopadmin2025';
+$host = DB_HOST;
+$dbname = DB_NAME;
+$username = DB_USER;
+$password = DB_PASS;
 
 try {
     $pdo = new PDO(
@@ -16,5 +16,8 @@ try {
         ]
     );
 } catch (PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
+    header('Content-Type: application/json');
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
+    exit;
 }

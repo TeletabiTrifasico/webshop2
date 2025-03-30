@@ -5,8 +5,7 @@
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule ^ index.php [L]
 
-    # Allow direct access to dist directory
-    RewriteCond %{REQUEST_URI} ^/dist/
+    # Serve existing files
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
@@ -14,21 +13,12 @@
     RewriteRule ^ index.html [L]
 </IfModule>
 
-# Proper MIME types
+# Set proper MIME types
 AddType application/javascript .js
 AddType application/javascript .mjs
 AddType text/css .css
 
-# Headers
-<FilesMatch "\.(js|mjs)$">
-    Header set Content-Type "application/javascript"
-</FilesMatch>
-
-<FilesMatch "\.css$">
-    Header set Content-Type "text/css"
-</FilesMatch>
-
-# CORS Headers
-Header set Access-Control-Allow-Origin "*"
-Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+# Security headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-XSS-Protection "1; mode=block"
+Header set X-Frame-Options "DENY"

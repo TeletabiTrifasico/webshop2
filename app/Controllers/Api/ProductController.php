@@ -2,7 +2,7 @@
 
 namespace App\Controllers\Api;
 
-class ProductController extends BaseController {
+class ProductController extends BaseApiController {
     private $productModel;
 
     public function __construct() {
@@ -11,74 +11,47 @@ class ProductController extends BaseController {
     }
 
     public function index() {
-        $products = $this->productModel->getAll();
-        $this->successResponse(['products' => $products]);
+        try {
+            $products = $this->productModel->getAll();
+            $this->jsonResponse(['products' => $products]);
+        } catch (\Exception $e) {
+            $this->jsonResponse(['error' => 'Failed to fetch products'], 500);
+        }
     }
 
     public function show($id) {
         $product = $this->productModel->findById($id);
         if (!$product) {
-            $this->errorResponse('Product not found', 404);
+            $this->jsonResponse(['error' => 'Product not found'], 404);
         }
-        $this->successResponse(['product' => $product]);
+        $this->jsonResponse(['product' => $product]);
     }
 
-    public function store() {
-        if (!$this->isAdmin()) {
-            $this->errorResponse('Unauthorized', 401);
-        }
-
-        $data = $this->getRequestData();
-        
+    public function latest() {
         try {
-            $productId = $this->productModel->create($data);
-            $product = $this->productModel->findById($productId);
-            $this->successResponse(
-                ['product' => $product], 
-                'Product created successfully'
-            );
+            $products = $this->productModel->getLatest(4);
+            
+            if (!$products) {
+                throw new \Exception("No products found");
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'products' => $products
+            ]);
         } catch (\Exception $e) {
-            $this->errorResponse($e->getMessage());
+            error_log("Latest products error: " . $e->getMessage());
+            
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Failed to fetch latest products',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
-    public function update($id) {
-        if (!$this->isAdmin()) {
-            $this->errorResponse('Unauthorized', 401);
-        }
-
-        $data = $this->getRequestData();
-        
-        try {
-            $this->productModel->update($id, $data);
-            $product = $this->productModel->findById($id);
-            $this->successResponse(
-                ['product' => $product], 
-                'Product updated successfully'
-            );
-        } catch (\Exception $e) {
-            $this->errorResponse($e->getMessage());
-        }
-    }
-
-    public function destroy($id) {
-        if (!$this->isAdmin()) {
-            $this->errorResponse('Unauthorized', 401);
-        }
-
-        try {
-            $this->productModel->delete($id);
-            $this->successResponse(null, 'Product deleted successfully');
-        } catch (\Exception $e) {
-            $this->errorResponse($e->getMessage());
-        }
-    }
-
-    private function getRequestData() {
-        return json_decode(file_get_contents('php://input'), true);
-    }
-
-    private function isAdmin() {
-        return isset($_SESSION['user_id']) && $_SESSION['role'] === 'admin';
+    public function featured() {
+        $products = $this->productModel->getFeatured();
+        $this->jsonResponse(['products' => $products]);
     }
 }
