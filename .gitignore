@@ -22,3 +22,14 @@ Thumbs.db
 /public/images/cache/*
 !public/images/cache/.gitkeep
 /public/dist
+/node_modules
+/node_modules
+/public/dist
+/vendor
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
