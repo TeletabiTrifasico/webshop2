@@ -16,6 +16,22 @@ class BaseApiController extends Controller {
     }
 
     protected function getRequestData() {
-        return json_decode(file_get_contents('php://input'), true);
+        try {
+            $rawData = file_get_contents('php://input');
+            error_log('Raw request data: ' . $rawData);
+            
+            $data = json_decode($rawData, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                error_log('JSON decode error: ' . json_last_error_msg());
+                throw new \Exception('Invalid JSON data');
+            }
+            
+            error_log('Parsed request data: ' . print_r($data, true));
+            return $data ?: [];
+        } catch (\Exception $e) {
+            error_log('Request data error: ' . $e->getMessage());
+            return [];
+        }
     }
 }

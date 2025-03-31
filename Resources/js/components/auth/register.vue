@@ -1,5 +1,5 @@
 <template>
-  <div class="container mt-4">
+  <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-md-6">
         <div class="card">
@@ -7,59 +7,44 @@
           <div class="card-body">
             <form @submit.prevent="handleSubmit">
               <div class="mb-3">
-                <label for="name" class="form-label">Name</label>
-                <input type="text"
-                       id="name"
-                       v-model="form.name"
-                       class="form-control"
-                       required>
+                <label class="form-label">Username</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  v-model="form.username" 
+                  required>
               </div>
-
+              
               <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email"
-                       id="email"
-                       v-model="form.email"
-                       class="form-control"
-                       required>
+                <label class="form-label">Email</label>
+                <input 
+                  type="email" 
+                  class="form-control" 
+                  v-model="form.email" 
+                  required>
               </div>
-
+              
               <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password"
-                       id="password"
-                       v-model="form.password"
-                       class="form-control"
-                       required>
+                <label class="form-label">Password</label>
+                <input 
+                  type="password" 
+                  class="form-control" 
+                  v-model="form.password" 
+                  required
+                  minlength="6">
               </div>
 
-              <div class="mb-3">
-                <label for="password_confirmation" class="form-label">
-                  Confirm Password
-                </label>
-                <input type="password"
-                       id="password_confirmation"
-                       v-model="form.password_confirmation"
-                       class="form-control"
-                       required>
-              </div>
-
-              <button type="submit"
-                      class="btn btn-primary w-100"
-                      :disabled="loading">
-                {{ loading ? 'Creating account...' : 'Register' }}
-              </button>
-
-              <div v-if="error" class="alert alert-danger mt-3">
+              <div v-if="error" class="alert alert-danger">
                 {{ error }}
               </div>
-            </form>
 
-            <div class="mt-3 text-center">
-              <p>Already have an account? 
-                <router-link to="/auth/login">Login</router-link>
-              </p>
-            </div>
+              <button 
+                type="submit" 
+                class="btn btn-primary w-100"
+                :disabled="loading">
+                {{ loading ? 'Registering...' : 'Register' }}
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -72,14 +57,13 @@ import { mapState, mapActions } from 'vuex'
 
 export default {
   name: 'Register',
-
+  
   data() {
     return {
       form: {
-        name: '',
+        username: '',
         email: '',
-        password: '',
-        password_confirmation: ''
+        password: ''
       }
     }
   },

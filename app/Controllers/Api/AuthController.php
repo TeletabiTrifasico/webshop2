@@ -46,36 +46,54 @@ class AuthController extends BaseApiController {
             $data = $this->getRequestData();
             
             // Validate required fields
-            if (!isset($data['name']) || !isset($data['email']) || !isset($data['password'])) {
+            if (empty($data['username']) || empty($data['email']) || empty($data['password'])) {
                 throw new \Exception('All fields are required');
             }
 
-            // Check if email already exists
+            // Validate email format
+            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                throw new \Exception('Invalid email format');
+            }
+
+            // Check if email exists
             if ($this->userModel->findByEmail($data['email'])) {
                 throw new \Exception('Email already registered');
             }
 
-            // Hash password
-            $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-
+            // Create user
             $userId = $this->userModel->create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => $hashedPassword,
+                'username' => trim($data['username']),
+                'email' => strtolower(trim($data['email'])),
+                'password' => password_hash($data['password'], PASSWORD_DEFAULT),
                 'role' => 'user'
             ]);
-            
+
+            if (!$userId) {
+                throw new \Exception('Failed to create account');
+            }
+
             $user = $this->userModel->findById($userId);
-            unset($user['password']);
-            
+            if (!$user) {
+                throw new \Exception('Error retrieving user account');
+            }
+
+            // Start session
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['role'] = $user['role'];
-            
+
+            // Remove sensitive data
+            unset($user['password']);
+
             $this->jsonResponse([
                 'success' => true,
                 'user' => $user
             ]);
         } catch (\Exception $e) {
+            error_log('Registration error: ' . $e->getMessage());
             $this->jsonResponse([
                 'success' => false,
                 'error' => $e->getMessage()
