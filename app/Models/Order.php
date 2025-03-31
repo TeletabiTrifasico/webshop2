@@ -47,12 +47,13 @@ class Order extends Model {
         $this->pdo->beginTransaction();
         
         try {
-            // Calculate total amount
-            $totalAmount = array_reduce($data['items'], function($sum, $item) {
-                return $sum + ($item['price'] * $item['quantity']);
-            }, 0);
-            
-            // Create order
+            // Calculate total amount from cart items
+            $totalAmount = 0;
+            foreach ($data['items'] as $item) {
+                $totalAmount += ($item['price'] * $item['quantity']);
+            }
+
+            // Create order record
             $stmt = $this->pdo->prepare("
                 INSERT INTO {$this->table} (user_id, total_amount, status, created_at)
                 VALUES (?, ?, 'pending', NOW())
@@ -69,9 +70,9 @@ class Order extends Model {
                 ");
                 
                 $stmt->execute([
-                    $orderId,
-                    $item['product_id'],
-                    $item['quantity'],
+                    $orderId, 
+                    $item['product_id'], 
+                    $item['quantity'], 
                     $item['price']
                 ]);
             }
@@ -82,10 +83,6 @@ class Order extends Model {
             $this->pdo->rollBack();
             throw $e;
         }
-    }
-
-    public function updateStatus($id, $status) {
-        return $this->update($id, ['status' => $status]);
     }
 
     public function getItems($orderId) {
@@ -112,6 +109,17 @@ class Order extends Model {
     }
 
     public function getByUser($userId) {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM {$this->table}
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        ");
+        
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
+    public function getByUserId($userId) {
         $stmt = $this->pdo->prepare("
             SELECT * FROM {$this->table}
             WHERE user_id = ?

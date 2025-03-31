@@ -41,6 +41,7 @@ $apiRoutes = [
     '/api/cart/update' => ['Api\CartController', 'update'],
     '/api/cart/remove' => ['Api\CartController', 'remove'],
     '/api/cart/clear' => ['Api\CartController', 'clear'],
+    '/api/cart/checkout' => ['Api\CartController', 'checkout'],
 ];
 
 // Handle API requests

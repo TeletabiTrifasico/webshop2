@@ -168,6 +168,7 @@ export default {
           error.value = result.error || 'Failed to place order'
         }
       } catch (err) {
+        console.error('Checkout error:', err)
         error.value = 'An error occurred while processing your order'
       } finally {
         loading.value = false
