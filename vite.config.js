@@ -4,29 +4,26 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [vue()],
-  root: './resources',
-  base: '/',
+  root: './Resources',
+  base: '/dist/',
   build: {
     outDir: '../public/dist',
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'resources/js/main.js')
+        main: path.resolve(__dirname, 'Resources/js/main.js')
       },
       output: {
         entryFileNames: '[name].js',
-        chunkFileNames: 'chunks/[name].[hash].js',
+        chunkFileNames: 'js/[name].[hash].js',
         assetFileNames: 'assets/[name].[hash][extname]'
       }
     }
   },
-  optimizeDeps: {
-    include: ['vue', 'vue-router', 'vuex', 'axios']
-  },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './resources/js')
+      '@': path.resolve(__dirname, './Resources/js')
     }
   }
 })

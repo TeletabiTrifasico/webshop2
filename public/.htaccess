@@ -5,32 +5,38 @@
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule ^ index.php [L]
 
-    # Handle assets with correct MIME types
-    RewriteCond %{REQUEST_FILENAME} \.(js|css)$
+    # Correctly serve JavaScript module files with proper MIME type
+    <FilesMatch "\.js$">
+        Header set Content-Type "application/javascript"
+    </FilesMatch>
+    
+    # Correctly serve CSS files
+    <FilesMatch "\.css$">
+        Header set Content-Type "text/css"
+    </FilesMatch>
+    
+    # Handle asset files directly if they exist
     RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
+    RewriteRule \.(js|css|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$ - [L]
 
-    # Set correct MIME types
-    AddType application/javascript .js
-    AddType text/css .css
-
-    # Handle all other routes
+    # Send all other requests to index.html for SPA routing
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.html [L]
 </IfModule>
 
-# Set CORS headers
+# Set correct MIME types for JavaScript modules
+AddType application/javascript .js
+AddType text/css .css
+
+# Set security headers
 <IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "DENY"
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # CORS headers
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
-    
-    # Set correct MIME types in headers
-    <FilesMatch "\.js$">
-        Header set Content-Type "application/javascript"
-    </FilesMatch>
-    <FilesMatch "\.css$">
-        Header set Content-Type "text/css"
-    </FilesMatch>
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
 </IfModule>

@@ -111,13 +111,11 @@ export default {
 }
 
 .card-img-top {
-  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 10px;
   transition: transform 0.3s ease;
 }
 
@@ -142,7 +140,7 @@ export default {
 }
 
 .card:hover {
-  transform: translateY(-25px);
+  transform: translateY(-10px);
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 </style>
