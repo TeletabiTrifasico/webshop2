@@ -5,20 +5,32 @@
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule ^ index.php [L]
 
-    # Serve existing files
+    # Handle assets with correct MIME types
+    RewriteCond %{REQUEST_FILENAME} \.(js|css)$
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 
-    # Serve the index.html for all other routes
+    # Set correct MIME types
+    AddType application/javascript .js
+    AddType text/css .css
+
+    # Handle all other routes
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.html [L]
 </IfModule>
 
-# Set proper MIME types
-AddType application/javascript .js
-AddType application/javascript .mjs
-AddType text/css .css
-
-# Security headers
-Header set X-Content-Type-Options "nosniff"
-Header set X-XSS-Protection "1; mode=block"
-Header set X-Frame-Options "DENY"
+# Set CORS headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+    
+    # Set correct MIME types in headers
+    <FilesMatch "\.js$">
+        Header set Content-Type "application/javascript"
+    </FilesMatch>
+    <FilesMatch "\.css$">
+        Header set Content-Type "text/css"
+    </FilesMatch>
+</IfModule>
