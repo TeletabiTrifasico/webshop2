@@ -12,20 +12,22 @@
 
     <div v-else class="row">
       <div class="col-md-6">
-        <img :src="product.image" 
-             :alt="product.name" 
-             class="img-fluid rounded">
+        <div class="product-image-container">
+          <img :src="product.image" 
+               :alt="product.name" 
+               class="img-fluid rounded product-detail-image">
+        </div>
       </div>
       <div class="col-md-6">
         <h1>{{ product.name }}</h1>
-        <p class="lead mb-4">${{ formatPrice(product.price) }}</p>
-        <p class="mb-4">{{ product.description }}</p>
+        <p class="lead price mb-4">${{ formatPrice(product.price) }}</p>
+        <p class="mb-4 description">{{ product.description }}</p>
         
         <div class="d-flex align-items-center mb-4">
-          <div class="input-group" style="width: 150px;">
+          <div class="quantity-control">
             <button class="btn btn-outline-secondary" 
                     @click="quantity > 1 && quantity--">-</button>
-            <input type="number" 
+            <input 
                    class="form-control text-center" 
                    v-model.number="quantity" 
                    min="1">
@@ -34,7 +36,7 @@
           </div>
         </div>
 
-        <button class="btn btn-primary btn-lg"
+        <button class="btn btn-primary btn-lg w-100"
                 @click="addToCart"
                 :disabled="!isAuthenticated">
           Add to Cart
@@ -113,3 +115,66 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.product-image-container {
+  height: 400px;
+  width: 100%;
+  overflow: hidden;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.product-detail-image {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.price {
+  font-size: 2rem;
+  color: #00b300;
+  font-weight: bold;
+}
+
+.description {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #6c757d;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  width: 150px;
+}
+
+.quantity-control input {
+  width: 60px;
+  text-align: center;
+}
+
+.quantity-control button {
+  width: 40px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .product-image-container {
+    height: 300px;
+    margin-bottom: 1rem;
+  }
+  
+  .price {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+}
+</style>
