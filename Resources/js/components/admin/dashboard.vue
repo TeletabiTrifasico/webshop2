@@ -116,6 +116,58 @@
         </div>
       </div>
     </div>
+    
+    <!-- Recent Users -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+        <h5 class="mb-0">Recent Users</h5>
+        <router-link to="/admin/users" class="btn btn-sm btn-primary">
+          Manage Users
+        </router-link>
+      </div>
+      <div class="card-body">
+        <div v-if="loading" class="text-center py-3">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <div v-else class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Registered</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in recentUsers" :key="user.id">
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span :class="getRoleBadgeClass(user.role)">
+                    {{ user.role }}
+                  </span>
+                </td>
+                <td>{{ formatDate(user.created_at) }}</td>
+                <td>
+                  <router-link :to="`/admin/users`" class="btn btn-sm btn-primary me-2">
+                    <i class="fas fa-user-edit"></i>
+                  </router-link>
+                </td>
+              </tr>
+              <tr v-if="recentUsers.length === 0">
+                <td colspan="6" class="text-center py-3">No users found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
     <!-- Products -->
     <div class="card shadow-sm">
@@ -179,6 +231,7 @@ export default {
         totalProducts: 0
       },
       recentOrders: [],
+      recentUsers: [],
       products: [],
       loading: true
     }
@@ -199,6 +252,13 @@ export default {
         'badge bg-warning text-dark': status === 'pending',
         'badge bg-info text-dark': status === 'processing',
         'badge bg-danger': status === 'cancelled'
+      }
+    },
+    
+    getRoleBadgeClass(role) {
+      return {
+        'badge bg-danger': role === 'admin',
+        'badge bg-primary': role === 'user'
       }
     },
     
@@ -223,6 +283,7 @@ export default {
         const usersResponse = await fetch('/api/admin/users')
         const usersData = await usersResponse.json()
         if (usersData.users) {
+          this.recentUsers = usersData.users.slice(0, 5)
           this.stats.totalUsers = usersData.users.length
         }
         
