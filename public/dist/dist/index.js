@@ -1,1 +1,0 @@
-import{_ as s,c as t,a as o,o as n}from"./main.js";const a={name:"Home"},c={class:"container mt-4"};function r(p,e,i,l,m,_){return n(),t("div",c,e[0]||(e[0]=[o("h1",null,"Welcome to Webshop",-1),o("p",null,"This is the home page",-1)]))}const f=s(a,[["render",r]]);export{f as default};
