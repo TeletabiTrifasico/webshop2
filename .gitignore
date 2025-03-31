@@ -21,3 +21,4 @@ Thumbs.db
 /public/images/products
 /public/images/cache/*
 !public/images/cache/.gitkeep
+/public/dist
