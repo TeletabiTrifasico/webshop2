@@ -36,6 +36,11 @@ $apiRoutes = [
     '/api/products/latest' => ['Api\ProductController', 'latest'],
     '/api/products/(\d+)' => ['Api\ProductController', 'show'],
     '/api/products' => ['Api\ProductController', 'index'],
+    '/api/cart' => ['Api\CartController', 'index'],
+    '/api/cart/add' => ['Api\CartController', 'add'],
+    '/api/cart/update' => ['Api\CartController', 'update'],
+    '/api/cart/remove' => ['Api\CartController', 'remove'],
+    '/api/cart/clear' => ['Api\CartController', 'clear'],
 ];
 
 // Handle API requests

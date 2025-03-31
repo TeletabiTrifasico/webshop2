@@ -38,9 +38,14 @@
 
         <button class="btn btn-primary btn-lg w-100"
                 @click="addToCart"
-                :disabled="!isAuthenticated">
-          Add to Cart
+                :disabled="!isAuthenticated || cartLoading">
+          <span v-if="cartLoading">Adding...</span>
+          <span v-else>Add to Cart</span>
         </button>
+
+        <div v-if="cartMessage" class="alert alert-success mt-3">
+          {{ cartMessage }}
+        </div>
 
         <div v-if="!isAuthenticated" class="alert alert-warning mt-3">
           Please <router-link to="/auth/login">login</router-link> to add items to cart
@@ -51,67 +56,92 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+import { ref, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
+import { useRoute, useRouter } from 'vue-router'
 
 export default {
   name: 'ProductShow',
 
-  data() {
-    return {
-      product: null,
-      quantity: 1,
-      loading: true,
-      error: null
-    }
-  },
+  setup() {
+    const store = useStore()
+    const route = useRoute()
+    const router = useRouter()
 
-  computed: {
-    ...mapState('auth', {
-      isAuthenticated: state => !!state.user
-    })
-  },
+    const product = ref(null)
+    const quantity = ref(1)
+    const loading = ref(true)
+    const error = ref(null)
+    const cartLoading = ref(false)
+    const cartMessage = ref('')
 
-  methods: {
-    ...mapActions('cart', ['addItem']),
+    const isAuthenticated = computed(() => !!store.state.auth.user)
 
-    formatPrice(price) {
+    const formatPrice = (price) => {
       return Number(price).toFixed(2)
-    },
+    }
 
-    async fetchProduct() {
+    const fetchProduct = async () => {
       try {
-        const response = await this.$axios.get(`/api/products/${this.$route.params.id}`)
-        this.product = response.data.product
-      } catch (error) {
-        console.error('Error fetching product:', error)
-        this.error = 'Failed to load product'
+        loading.value = true
+        const response = await fetch(`/api/products/${route.params.id}`)
+        const data = await response.json()
+        
+        if (data.product) {
+          product.value = data.product
+        } else {
+          throw new Error(data.error || 'Failed to load product')
+        }
+      } catch (err) {
+        error.value = 'Failed to load product'
       } finally {
-        this.loading = false
+        loading.value = false
       }
-    },
+    }
 
-    async addToCart() {
-      if (!this.isAuthenticated) {
-        this.$router.push('/auth/login')
+    const addToCart = async () => {
+      if (!isAuthenticated.value) {
+        router.push('/auth/login')
         return
       }
 
       try {
-        await this.addItem({
-          productId: this.product.id,
-          quantity: this.quantity
+        cartLoading.value = true
+        const result = await store.dispatch('cart/addItem', {
+          productId: product.value.id,
+          quantity: quantity.value
         })
-        // Add toast notification here if you have a notification system
-        alert('Product added to cart')
+        
+        if (result.success) {
+          cartMessage.value = `${product.value.name} added to your cart!`
+          setTimeout(() => {
+            cartMessage.value = ''
+          }, 5000)
+        } else {
+          throw new Error(result.error || 'Failed to add item to cart')
+        }
       } catch (error) {
-        console.error('Error adding to cart:', error)
-        alert('Failed to add product to cart')
+        alert('Failed to add product to cart: ' + error.message)
+      } finally {
+        cartLoading.value = false
       }
     }
-  },
 
-  created() {
-    this.fetchProduct()
+    onMounted(() => {
+      fetchProduct()
+    })
+
+    return {
+      product,
+      quantity,
+      loading,
+      cartLoading,
+      error,
+      cartMessage,
+      isAuthenticated,
+      formatPrice,
+      addToCart
+    }
   }
 }
 </script>

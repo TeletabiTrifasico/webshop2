@@ -47,21 +47,26 @@ class Order extends Model {
         $this->pdo->beginTransaction();
         
         try {
+            // Calculate total amount
+            $totalAmount = array_reduce($data['items'], function($sum, $item) {
+                return $sum + ($item['price'] * $item['quantity']);
+            }, 0);
+            
             // Create order
-            $orderId = parent::create([
-                'user_id' => $data['user_id'],
-                'status' => 'pending',
-                'total_amount' => array_reduce($data['items'], function($sum, $item) {
-                    return $sum + ($item['price'] * $item['quantity']);
-                }, 0)
-            ]);
+            $stmt = $this->pdo->prepare("
+                INSERT INTO {$this->table} (user_id, total_amount, status, created_at)
+                VALUES (?, ?, 'pending', NOW())
+            ");
+            
+            $stmt->execute([$data['user_id'], $totalAmount]);
+            $orderId = $this->pdo->lastInsertId();
             
             // Create order items
             foreach ($data['items'] as $item) {
-                $stmt = $this->pdo->prepare(
-                    "INSERT INTO order_items (order_id, product_id, quantity, price)
-                     VALUES (?, ?, ?, ?)"
-                );
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO order_items (order_id, product_id, quantity, price)
+                    VALUES (?, ?, ?, ?)
+                ");
                 
                 $stmt->execute([
                     $orderId,
@@ -104,5 +109,22 @@ class Order extends Model {
         ");
         $stmt->execute([$id]);
         return $stmt->fetchAll();
+    }
+
+    public function getByUser($userId) {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM {$this->table}
+            WHERE user_id = ?
+            ORDER BY created_at DESC
+        ");
+        
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll();
+    }
+
+    public function findById($id) {
+        $stmt = $this->pdo->prepare("SELECT * FROM {$this->table} WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch();
     }
 }

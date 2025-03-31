@@ -19,6 +19,14 @@
 
         <ul class="navbar-nav align-items-center">
           <template v-if="isAuthenticated">
+            <li class="nav-item me-3 position-relative">
+              <router-link to="/cart" class="nav-link">
+                <i class="fas fa-shopping-cart"></i>
+                <span v-if="cartCount > 0" class="badge bg-danger cart-count">
+                  {{ cartCount }}
+                </span>
+              </router-link>
+            </li>
             <li class="nav-item me-3">
               <span class="nav-link text-light">
                 <i class="fas fa-user me-1"></i>
@@ -48,23 +56,48 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
+import { computed, onMounted, watch } from 'vue'
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'AppHeader',
 
-  computed: {
-    ...mapState('auth', ['user']),
-    isAuthenticated() {
-      return !!this.user
+  setup() {
+    const store = useStore()
+    const router = useRouter()
+    
+    const user = computed(() => store.state.auth.user)
+    const isAuthenticated = computed(() => !!user.value)
+    const cartItems = computed(() => store.state.cart.items)
+    const cartCount = computed(() => cartItems.value.length)
+    
+    const handleLogout = async () => {
+      await store.dispatch('auth/logout')
+      router.push('/auth/login')
     }
-  },
-
-  methods: {
-    ...mapActions('auth', ['logout']),
-    async handleLogout() {
-      await this.logout()
-      this.$router.push('/auth/login')
+    
+    const fetchCart = () => {
+      if (isAuthenticated.value) {
+        store.dispatch('cart/fetchCart')
+      }
+    }
+    
+    onMounted(() => {
+      fetchCart()
+    })
+    
+    watch(isAuthenticated, (newValue) => {
+      if (newValue) {
+        fetchCart()
+      }
+    })
+    
+    return {
+      user,
+      isAuthenticated,
+      cartCount,
+      handleLogout
     }
   }
 }
@@ -90,5 +123,14 @@ export default {
 
 .nav-link:hover {
   color: #fff;
+}
+
+.cart-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translate(25%, -25%);
+  font-size: 0.6rem;
+  padding: 0.2rem 0.4rem;
 }
 </style>
