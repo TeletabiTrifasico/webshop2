@@ -88,6 +88,18 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
   {
+    path: '/admin/users/create',
+    name: 'admin-users-create',
+    component: () => import('@/components/admin/UserForm.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/users/edit/:id',
+    name: 'admin-users-edit',
+    component: () => import('@/components/admin/UserForm.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/components/404.vue')

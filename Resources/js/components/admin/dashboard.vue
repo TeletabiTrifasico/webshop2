@@ -155,9 +155,14 @@
                 </td>
                 <td>{{ formatDate(user.created_at) }}</td>
                 <td>
-                  <router-link :to="`/admin/users`" class="btn btn-sm btn-primary me-2">
-                    <i class="fas fa-user-edit"></i>
-                  </router-link>
+                  <div class="btn-group">
+                    <router-link :to="`/admin/users/edit/${user.id}`" class="btn btn-sm btn-primary me-2">
+                      <i class="fas fa-edit"></i>
+                    </router-link>
+                    <router-link :to="`/admin/users`" class="btn btn-sm btn-secondary">
+                      <i class="fas fa-users"></i>
+                    </router-link>
+                  </div>
                 </td>
               </tr>
               <tr v-if="recentUsers.length === 0">

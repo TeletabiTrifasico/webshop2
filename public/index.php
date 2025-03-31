@@ -61,6 +61,11 @@ $apiRoutes = [
 
 // Routes with specific HTTP methods
 $apiRoutesMethods = [
+    // User management routes
+    'GET:/api/admin/users/(\d+)' => ['Api\UserAdminController', 'getUser'],
+    'POST:/api/admin/users' => ['Api\UserAdminController', 'create'],
+    'PUT:/api/admin/users/(\d+)' => ['Api\UserAdminController', 'update'],
+    
     // Admin user routes
     'PUT:/api/admin/users/(\d+)/role' => ['Api\AdminController', 'updateUserRole'],
     'DELETE:/api/admin/users/(\d+)' => ['Api\AdminController', 'deleteUser'],

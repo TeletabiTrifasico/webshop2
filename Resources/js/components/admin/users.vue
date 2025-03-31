@@ -2,6 +2,9 @@
   <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1>Users</h1>
+      <router-link to="/admin/users/create" class="btn btn-success">
+        <i class="fas fa-plus me-2"></i> Add New User
+      </router-link>
     </div>
 
     <!-- Search -->
@@ -68,9 +71,14 @@
                 <td>{{ formatDate(user.created_at) }}</td>
                 <td>
                   <div class="btn-group">
+                    <router-link 
+                      :to="`/admin/users/edit/${user.id}`" 
+                      class="btn btn-sm btn-primary me-2">
+                      <i class="fas fa-edit"></i> Edit
+                    </router-link>
                     <button 
                       @click="toggleUserRole(user)"
-                      class="btn btn-sm btn-outline-primary me-2">
+                      class="btn btn-sm btn-outline-secondary me-2">
                       Toggle Role
                     </button>
                     <button 
@@ -160,7 +168,7 @@ export default {
           throw new Error(response.data.message || 'Failed to update user role')
         }
       } catch (err) {
-        alert(err.message || 'An error occurred while updating the user role')
+        alert(err.response?.data?.error || err.message || 'An error occurred while updating the user role')
         console.error(err)
       }
     }
@@ -168,14 +176,16 @@ export default {
     const deleteUser = async (id) => {
       // Don't allow deleting yourself
       if (id === currentUserId.value) {
+        alert('You cannot delete your own account')
         return
       }
 
-      if (!confirm('Are you sure you want to delete this user?')) {
+      if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
         return
       }
 
       try {
+        loading.value = true
         const response = await axios.delete(`/api/admin/users/${id}`)
         
         if (response.data.success) {
@@ -185,8 +195,10 @@ export default {
           throw new Error(response.data.message || 'Failed to delete user')
         }
       } catch (err) {
-        alert(err.message || 'An error occurred while deleting the user')
+        alert(err.response?.data?.error || err.message || 'An error occurred while deleting the user')
         console.error(err)
+      } finally {
+        loading.value = false
       }
     }
 
