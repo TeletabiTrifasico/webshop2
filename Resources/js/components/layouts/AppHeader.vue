@@ -15,6 +15,9 @@
           <li class="nav-item">
             <router-link class="nav-link" to="/products">Products</router-link>
           </li>
+          <li class="nav-item" v-if="isAdmin">
+            <router-link class="nav-link" to="/admin">Admin</router-link>
+          </li>
         </ul>
 
         <ul class="navbar-nav align-items-center">
@@ -69,6 +72,7 @@ export default {
     
     const user = computed(() => store.state.auth.user)
     const isAuthenticated = computed(() => !!user.value)
+    const isAdmin = computed(() => isAuthenticated.value && user.value?.role === 'admin')
     const cartItems = computed(() => store.state.cart.items)
     const cartCount = computed(() => cartItems.value.length)
     
@@ -96,6 +100,7 @@ export default {
     return {
       user,
       isAuthenticated,
+      isAdmin,
       cartCount,
       handleLogout
     }

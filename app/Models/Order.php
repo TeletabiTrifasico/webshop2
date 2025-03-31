@@ -6,12 +6,14 @@ class Order extends Model {
     protected $table = 'orders';
 
     public function getAll() {
-        $stmt = $this->pdo->query("
-            SELECT o.*, u.username 
-            FROM orders o 
-            JOIN users u ON o.user_id = u.id 
+        $stmt = $this->pdo->prepare("
+            SELECT o.*, u.username
+            FROM {$this->table} o
+            JOIN users u ON o.user_id = u.id
             ORDER BY o.created_at DESC
         ");
+        
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 
@@ -131,8 +133,20 @@ class Order extends Model {
     }
 
     public function findById($id) {
-        $stmt = $this->pdo->prepare("SELECT * FROM {$this->table} WHERE id = ?");
+        $stmt = $this->pdo->prepare("
+            SELECT o.*, u.username, u.email
+            FROM {$this->table} o
+            JOIN users u ON o.user_id = u.id
+            WHERE o.id = ?
+        ");
         $stmt->execute([$id]);
         return $stmt->fetch();
+    }
+
+    public function updateStatus($id, $status) {
+        $stmt = $this->pdo->prepare("
+            UPDATE {$this->table} SET status = ? WHERE id = ?
+        ");
+        return $stmt->execute([$status, $id]);
     }
 }

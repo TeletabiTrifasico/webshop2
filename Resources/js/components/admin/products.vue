@@ -3,43 +3,19 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1>Products</h1>
       <router-link to="/admin/products/create" class="btn btn-success">
-        Add New Product
+        <i class="fas fa-plus me-2"></i> Add New Product
       </router-link>
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4">
+    <div class="card mb-4 shadow-sm">
       <div class="card-body">
         <div class="row">
-          <div class="col-md-3">
-            <div class="mb-3">
-              <label class="form-label">Category</label>
-              <select v-model="filters.category" class="form-select">
-                <option value="">All Categories</option>
-                <option v-for="category in categories" 
-                        :key="category.id"
-                        :value="category.id">
-                  {{ category.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="mb-3">
-              <label class="form-label">Stock Status</label>
-              <select v-model="filters.stock" class="form-select">
-                <option value="">All</option>
-                <option value="in_stock">In Stock</option>
-                <option value="low_stock">Low Stock</option>
-                <option value="out_of_stock">Out of Stock</option>
-              </select>
-            </div>
-          </div>
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Search</label>
               <input type="text" 
-                     v-model="filters.search" 
+                     v-model="searchQuery" 
                      class="form-control"
                      placeholder="Search products...">
             </div>
@@ -49,48 +25,58 @@
     </div>
 
     <!-- Products Table -->
-    <div class="card">
+    <div class="card shadow-sm">
       <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
+        <div v-if="loading" class="text-center py-5">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3">Loading products...</p>
+        </div>
+        
+        <div v-else-if="error" class="alert alert-danger">
+          {{ error }}
+        </div>
+        
+        <div v-else-if="filteredProducts.length === 0" class="text-center py-5">
+          <div class="mb-4">
+            <i class="fas fa-box-open fa-4x text-muted"></i>
+          </div>
+          <h3>No products found</h3>
+          <p class="text-muted">Try adjusting your search or add a new product.</p>
+        </div>
+        
+        <div v-else class="table-responsive">
+          <table class="table table-hover">
             <thead>
               <tr>
                 <th>Image</th>
                 <th>Name</th>
-                <th>Category</th>
                 <th>Price</th>
-                <th>Stock</th>
-                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="product in products" :key="product.id">
-                <td>
+              <tr v-for="product in filteredProducts" :key="product.id">
+                <td width="80">
                   <img :src="product.image" 
                        :alt="product.name"
-                       class="product-thumbnail">
+                       class="img-thumbnail" 
+                       style="width: 50px; height: 50px; object-fit: cover;">
                 </td>
                 <td>{{ product.name }}</td>
-                <td>{{ product.category.name }}</td>
                 <td>${{ formatPrice(product.price) }}</td>
-                <td>{{ product.stock }}</td>
-                <td>
-                  <span :class="getStockStatusClass(product)">
-                    {{ getStockStatusText(product) }}
-                  </span>
-                </td>
                 <td>
                   <div class="btn-group">
                     <router-link 
-                      :to="`/admin/products/${product.id}/edit`"
-                      class="btn btn-sm btn-primary">
-                      Edit
+                      :to="`/admin/products/edit/${product.id}`"
+                      class="btn btn-sm btn-primary me-2">
+                      <i class="fas fa-edit"></i> Edit
                     </router-link>
                     <button 
                       @click="deleteProduct(product.id)"
                       class="btn btn-sm btn-danger">
-                      Delete
+                      <i class="fas fa-trash"></i> Delete
                     </button>
                   </div>
                 </td>
@@ -98,150 +84,92 @@
             </tbody>
           </table>
         </div>
-
-        <!-- Pagination -->
-        <nav v-if="pagination.lastPage > 1" class="mt-4">
-          <ul class="pagination justify-content-center">
-            <li :class="['page-item', { disabled: pagination.currentPage === 1 }]">
-              <a class="page-link" href="#" @click.prevent="changePage(1)">
-                First
-              </a>
-            </li>
-            <li :class="['page-item', { disabled: pagination.currentPage === 1 }]">
-              <a class="page-link" href="#" 
-                 @click.prevent="changePage(pagination.currentPage - 1)">
-                Previous
-              </a>
-            </li>
-            <li v-for="page in displayedPages" 
-                :key="page"
-                :class="['page-item', { active: page === pagination.currentPage }]">
-              <a class="page-link" href="#" @click.prevent="changePage(page)">
-                {{ page }}
-              </a>
-            </li>
-            <li :class="['page-item', 
-                        { disabled: pagination.currentPage === pagination.lastPage }]">
-              <a class="page-link" href="#" 
-                 @click.prevent="changePage(pagination.currentPage + 1)">
-                Next
-              </a>
-            </li>
-            <li :class="['page-item', 
-                        { disabled: pagination.currentPage === pagination.lastPage }]">
-              <a class="page-link" href="#" 
-                 @click.prevent="changePage(pagination.lastPage)">
-                Last
-              </a>
-            </li>
-          </ul>
-        </nav>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
 export default {
   name: 'AdminProducts',
 
-  data() {
-    return {
-      products: [],
-      categories: [],
-      filters: {
-        category: '',
-        stock: '',
-        search: ''
-      },
-      pagination: {
-        currentPage: 1,
-        lastPage: 1,
-        perPage: 15
-      }
-    }
-  },
+  setup() {
+    const products = ref([])
+    const loading = ref(true)
+    const error = ref(null)
+    const searchQuery = ref('')
 
-  computed: {
-    displayedPages() {
-      const pages = []
-      const current = this.pagination.currentPage
-      const last = this.pagination.lastPage
+    const filteredProducts = computed(() => {
+      if (!searchQuery.value) return products.value
+      
+      const query = searchQuery.value.toLowerCase()
+      return products.value.filter(product => 
+        product.name.toLowerCase().includes(query) || 
+        product.description?.toLowerCase().includes(query)
+      )
+    })
 
-      if (last <= 7) {
-        for (let i = 1; i <= last; i++) {
-          pages.push(i)
-        }
-      } else {
-        if (current <= 4) {
-          for (let i = 1; i <= 5; i++) {
-            pages.push(i)
-          }
-          pages.push('...')
-          pages.push(last)
-        } else if (current >= last - 3) {
-          pages.push(1)
-          pages.push('...')
-          for (let i = last - 4; i <= last; i++) {
-            pages.push(i)
-          }
-        } else {
-          pages.push(1)
-          pages.push('...')
-          for (let i = current - 1; i <= current + 1; i++) {
-            pages.push(i)
-          }
-          pages.push('...')
-          pages.push(last)
-        }
-      }
-      return pages
-    }
-  },
-
-  methods: {
-    formatPrice(price) {
+    const formatPrice = (price) => {
       return Number(price).toFixed(2)
-    },
+    }
 
-    getStockStatusClass(product) {
-      if (product.stock <= 0) {
-        return 'badge bg-danger'
+    const fetchProducts = async () => {
+      try {
+        loading.value = true
+        const response = await axios.get('/api/products')
+        
+        if (response.data.products) {
+          products.value = response.data.products
+        } else {
+          throw new Error('Failed to load products')
+        }
+      } catch (err) {
+        error.value = err.message || 'An error occurred while loading products'
+        console.error(err)
+      } finally {
+        loading.value = false
       }
-      if (product.stock <= product.min_stock) {
-        return 'badge bg-warning'
-      }
-      return 'badge bg-success'
-    },
+    }
 
-    getStockStatusText(product) {
-      if (product.stock <= 0) {
-        return 'Out of Stock'
+    const deleteProduct = async (id) => {
+      if (!confirm('Are you sure you want to delete this product?')) {
+        return
       }
-      if (product.stock <= product.min_stock) {
-        return 'Low Stock'
-      }
-      return 'In Stock'
-    },
 
-    deleteProduct(id) {
-      if (confirm('Are you sure you want to delete this product?')) {
-        // Implement delete logic here
+      try {
+        loading.value = true
+        const response = await axios.delete(`/api/admin/products/${id}`)
+        
+        if (response.data.success) {
+          // Remove the product from the list
+          products.value = products.value.filter(p => p.id !== id)
+        } else {
+          throw new Error(response.data.message || 'Failed to delete product')
+        }
+      } catch (err) {
+        alert(err.message || 'An error occurred while deleting the product')
+        console.error(err)
+      } finally {
+        loading.value = false
       }
-    },
+    }
 
-    changePage(page) {
-      this.pagination.currentPage = page
-      // Implement page change logic here
+    onMounted(() => {
+      fetchProducts()
+    })
+
+    return {
+      products,
+      filteredProducts,
+      loading,
+      error,
+      searchQuery,
+      formatPrice,
+      deleteProduct
     }
   }
 }
 </script>
-
-<style>
-.product-thumbnail {
-  width: 50px;
-  height: 50px;
-  object-fit: cover;
-}
-</style>

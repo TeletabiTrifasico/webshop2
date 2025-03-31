@@ -30,18 +30,27 @@ session_start();
 
 // API Routes configuration
 $apiRoutes = [
+    // Auth routes
     '/api/auth/login' => ['Api\AuthController', 'login'],
     '/api/auth/register' => ['Api\AuthController', 'register'],
     '/api/auth/logout' => ['Api\AuthController', 'logout'],
+    
+    // Product routes
     '/api/products/latest' => ['Api\ProductController', 'latest'],
     '/api/products/(\d+)' => ['Api\ProductController', 'show'],
     '/api/products' => ['Api\ProductController', 'index'],
+    
+    // Cart routes
     '/api/cart' => ['Api\CartController', 'index'],
     '/api/cart/add' => ['Api\CartController', 'add'],
     '/api/cart/update' => ['Api\CartController', 'update'],
     '/api/cart/remove' => ['Api\CartController', 'remove'],
     '/api/cart/clear' => ['Api\CartController', 'clear'],
     '/api/cart/checkout' => ['Api\CartController', 'checkout'],
+    
+    // Admin routes
+    '/api/admin/users' => ['Api\AdminController', 'getUsers'],
+    '/api/admin/orders' => ['Api\AdminController', 'getOrders'],
 ];
 
 // Handle API requests

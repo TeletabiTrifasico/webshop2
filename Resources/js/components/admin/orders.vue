@@ -3,41 +3,29 @@
     <h1 class="mb-4">Orders</h1>
 
     <!-- Filters -->
-    <div class="card mb-4">
+    <div class="card mb-4 shadow-sm">
       <div class="card-body">
         <div class="row">
           <div class="col-md-3">
             <div class="mb-3">
               <label class="form-label">Status</label>
-              <select v-model="filters.status" class="form-select">
+              <select v-model="statusFilter" class="form-select">
                 <option value="">All</option>
                 <option value="pending">Pending</option>
                 <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="mb-3">
-              <label class="form-label">Date Range</label>
-              <input type="date" v-model="filters.startDate" class="form-control">
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="mb-3">
-              <label class="form-label">&nbsp;</label>
-              <input type="date" v-model="filters.endDate" class="form-control">
-            </div>
-          </div>
-          <div class="col-md-3">
+          <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Search</label>
-              <input 
-                type="text" 
-                v-model="filters.search" 
-                class="form-control"
-                placeholder="Order ID or Customer">
+              <input type="text" 
+                     v-model="searchQuery" 
+                     class="form-control"
+                     placeholder="Search by order ID or customer name">
             </div>
           </div>
         </div>
@@ -45,10 +33,29 @@
     </div>
 
     <!-- Orders Table -->
-    <div class="card">
+    <div class="card shadow-sm">
       <div class="card-body">
-        <div class="table-responsive">
-          <table class="table">
+        <div v-if="loading" class="text-center py-5">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3">Loading orders...</p>
+        </div>
+        
+        <div v-else-if="error" class="alert alert-danger">
+          {{ error }}
+        </div>
+        
+        <div v-else-if="filteredOrders.length === 0" class="text-center py-5">
+          <div class="mb-4">
+            <i class="fas fa-shopping-bag fa-4x text-muted"></i>
+          </div>
+          <h3>No orders found</h3>
+          <p class="text-muted">Try adjusting your search or filters.</p>
+        </div>
+        
+        <div v-else class="table-responsive">
+          <table class="table table-hover">
             <thead>
               <tr>
                 <th>Order ID</th>
@@ -60,15 +67,15 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="order in orders" :key="order.id">
+              <tr v-for="order in filteredOrders" :key="order.id">
                 <td>
-                  <router-link :to="`/admin/orders/${order.id}`">
+                  <router-link :to="`/admin/orders/${order.id}`" class="text-decoration-none fw-bold">
                     #{{ order.id }}
                   </router-link>
                 </td>
-                <td>{{ order.customer_name }}</td>
+                <td>{{ order.username }}</td>
                 <td>{{ formatDate(order.created_at) }}</td>
-                <td>${{ formatPrice(order.total) }}</td>
+                <td>${{ formatPrice(order.total_amount) }}</td>
                 <td>
                   <span :class="getStatusBadgeClass(order.status)">
                     {{ order.status }}
@@ -78,13 +85,13 @@
                   <div class="btn-group">
                     <router-link 
                       :to="`/admin/orders/${order.id}`"
-                      class="btn btn-sm btn-primary">
-                      View
+                      class="btn btn-sm btn-primary me-2">
+                      <i class="fas fa-eye"></i> View
                     </router-link>
                     <button 
                       @click="deleteOrder(order.id)"
                       class="btn btn-sm btn-danger">
-                      Delete
+                      <i class="fas fa-trash"></i>
                     </button>
                   </div>
                 </td>
@@ -92,174 +99,118 @@
             </tbody>
           </table>
         </div>
-
-        <!-- Pagination -->
-        <nav v-if="pagination.lastPage > 1" class="mt-4">
-          <ul class="pagination justify-content-center">
-            <li :class="['page-item', { disabled: pagination.currentPage === 1 }]">
-              <a class="page-link" href="#" @click.prevent="changePage(1)">
-                First
-              </a>
-            </li>
-            <li :class="['page-item', { disabled: pagination.currentPage === 1 }]">
-              <a class="page-link" href="#" 
-                 @click.prevent="changePage(pagination.currentPage - 1)">
-                Previous
-              </a>
-            </li>
-            <li v-for="page in displayedPages" 
-                :key="page"
-                :class="['page-item', { active: page === pagination.currentPage }]">
-              <a class="page-link" href="#" @click.prevent="changePage(page)">
-                {{ page }}
-              </a>
-            </li>
-            <li :class="['page-item', 
-                        { disabled: pagination.currentPage === pagination.lastPage }]">
-              <a class="page-link" href="#" 
-                 @click.prevent="changePage(pagination.currentPage + 1)">
-                Next
-              </a>
-            </li>
-            <li :class="['page-item', 
-                        { disabled: pagination.currentPage === pagination.lastPage }]">
-              <a class="page-link" href="#" 
-                 @click.prevent="changePage(pagination.lastPage)">
-                Last
-              </a>
-            </li>
-          </ul>
-        </nav>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted } from 'vue'
+import axios from 'axios'
+
 export default {
   name: 'AdminOrders',
 
-  data() {
-    return {
-      orders: [],
-      filters: {
-        status: '',
-        startDate: '',
-        endDate: '',
-        search: ''
-      },
-      pagination: {
-        currentPage: 1,
-        lastPage: 1,
-        perPage: 15
+  setup() {
+    const orders = ref([])
+    const loading = ref(true)
+    const error = ref(null)
+    const searchQuery = ref('')
+    const statusFilter = ref('')
+
+    const filteredOrders = computed(() => {
+      let result = orders.value
+
+      // Filter by status
+      if (statusFilter.value) {
+        result = result.filter(order => order.status === statusFilter.value)
       }
-    }
-  },
-
-  computed: {
-    displayedPages() {
-      const pages = []
-      const current = this.pagination.currentPage
-      const last = this.pagination.lastPage
-
-      if (last <= 7) {
-        for (let i = 1; i <= last; i++) {
-          pages.push(i)
-        }
-      } else {
-        if (current <= 4) {
-          for (let i = 1; i <= 5; i++) {
-            pages.push(i)
-          }
-          pages.push('...')
-          pages.push(last)
-        } else if (current >= last - 3) {
-          pages.push(1)
-          pages.push('...')
-          for (let i = last - 4; i <= last; i++) {
-            pages.push(i)
-          }
-        } else {
-          pages.push(1)
-          pages.push('...')
-          for (let i = current - 1; i <= current + 1; i++) {
-            pages.push(i)
-          }
-          pages.push('...')
-          pages.push(last)
-        }
+      
+      // Filter by search query
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
+        result = result.filter(order => 
+          order.id.toString().includes(query) || 
+          order.username.toLowerCase().includes(query)
+        )
       }
-      return pages
-    }
-  },
+      
+      return result
+    })
 
-  methods: {
-    formatPrice(price) {
+    const formatPrice = (price) => {
       return Number(price).toFixed(2)
-    },
+    }
 
-    formatDate(date) {
-      return new Date(date).toLocaleDateString()
-    },
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString()
+    }
 
-    getStatusBadgeClass(status) {
-      return {
-        'badge bg-success': status === 'completed',
-        'badge bg-warning': status === 'pending',
-        'badge bg-info': status === 'processing',
-        'badge bg-danger': status === 'cancelled'
+    const getStatusBadgeClass = (status) => {
+      const classes = {
+        'pending': 'badge bg-warning text-dark',
+        'processing': 'badge bg-info text-dark',
+        'shipped': 'badge bg-primary',
+        'delivered': 'badge bg-success',
+        'cancelled': 'badge bg-danger'
       }
-    },
+      return classes[status] || 'badge bg-secondary'
+    }
 
-    async fetchOrders() {
+    const fetchOrders = async () => {
       try {
-        const params = {
-          page: this.pagination.currentPage,
-          ...this.filters
+        loading.value = true
+        const response = await axios.get('/api/admin/orders')
+        
+        if (response.data.orders) {
+          orders.value = response.data.orders
+        } else {
+          throw new Error('Failed to load orders')
         }
-        const response = await this.$axios.get('/admin/orders', { params })
-        this.orders = response.data.orders
-        this.pagination = response.data.pagination
-      } catch (error) {
-        console.error('Error fetching orders:', error)
-        this.$toast.error('Failed to load orders')
+      } catch (err) {
+        error.value = err.message || 'An error occurred while loading orders'
+        console.error(err)
+      } finally {
+        loading.value = false
       }
-    },
+    }
 
-    async deleteOrder(id) {
+    const deleteOrder = async (id) => {
       if (!confirm('Are you sure you want to delete this order?')) {
         return
       }
 
       try {
-        await this.$axios.delete(`/admin/orders/${id}`)
-        this.$toast.success('Order deleted successfully')
-        await this.fetchOrders()
-      } catch (error) {
-        console.error('Error deleting order:', error)
-        this.$toast.error('Failed to delete order')
-      }
-    },
-
-    changePage(page) {
-      if (page === '...') return
-      this.pagination.currentPage = page
-      this.fetchOrders()
-    }
-  },
-
-  watch: {
-    filters: {
-      deep: true,
-      handler() {
-        this.pagination.currentPage = 1
-        this.fetchOrders()
+        const response = await axios.delete(`/api/admin/orders/${id}`)
+        
+        if (response.data.success) {
+          // Remove the order from the list
+          orders.value = orders.value.filter(o => o.id !== id)
+        } else {
+          throw new Error(response.data.message || 'Failed to delete order')
+        }
+      } catch (err) {
+        alert(err.message || 'An error occurred while deleting the order')
+        console.error(err)
       }
     }
-  },
 
-  created() {
-    this.fetchOrders()
+    onMounted(() => {
+      fetchOrders()
+    })
+
+    return {
+      orders,
+      filteredOrders,
+      loading,
+      error,
+      searchQuery,
+      statusFilter,
+      formatPrice,
+      formatDate,
+      getStatusBadgeClass,
+      deleteOrder
+    }
   }
 }
 </script>

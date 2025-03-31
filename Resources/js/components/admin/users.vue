@@ -1,110 +1,211 @@
 <template>
   <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1>Manage Users</h1>
-      <router-link to="/admin/users/create" class="btn btn-success">
-        Add New User
-      </router-link>
+      <h1>Users</h1>
     </div>
 
-    <div class="table-responsive">
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Created</th>
-            <th>Role</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in users" :key="user.id">
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ formatDate(user.created_at) }}</td>
-            <td>
-              <span :class="['badge', getRoleBadgeClass(user.role)]">
-                {{ capitalize(user.role) }}
-              </span>
-            </td>
-            <td>
-              <router-link 
-                :to="`/admin/users/edit/${user.id}`"
-                class="btn btn-sm btn-primary me-2">
-                Edit
-              </router-link>
-              <button 
-                @click="deleteUser(user.id)"
-                class="btn btn-sm btn-danger">
-                Delete
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Search -->
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-0">
+              <label class="form-label">Search Users</label>
+              <input type="text" 
+                     v-model="searchQuery" 
+                     class="form-control"
+                     placeholder="Search by username or email...">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div v-if="loading" class="text-center py-5">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3">Loading users...</p>
+        </div>
+        
+        <div v-else-if="error" class="alert alert-danger">
+          {{ error }}
+        </div>
+        
+        <div v-else-if="filteredUsers.length === 0" class="text-center py-5">
+          <div class="mb-4">
+            <i class="fas fa-users fa-4x text-muted"></i>
+          </div>
+          <h3>No users found</h3>
+          <p class="text-muted">Try adjusting your search.</p>
+        </div>
+        
+        <div v-else class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Registered</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in filteredUsers" :key="user.id">
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  <span :class="getRoleBadgeClass(user.role)">
+                    {{ user.role }}
+                  </span>
+                </td>
+                <td>{{ formatDate(user.created_at) }}</td>
+                <td>
+                  <div class="btn-group">
+                    <button 
+                      @click="toggleUserRole(user)"
+                      class="btn btn-sm btn-outline-primary me-2">
+                      Toggle Role
+                    </button>
+                    <button 
+                      @click="deleteUser(user.id)"
+                      class="btn btn-sm btn-danger"
+                      :disabled="user.id === currentUserId">
+                      <i class="fas fa-trash"></i> Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
+import axios from 'axios'
+
 export default {
   name: 'AdminUsers',
 
-  data() {
-    return {
-      users: []
+  setup() {
+    const store = useStore()
+    const users = ref([])
+    const loading = ref(true)
+    const error = ref(null)
+    const searchQuery = ref('')
+
+    const currentUser = computed(() => store.state.auth.user)
+    const currentUserId = computed(() => currentUser.value?.id)
+
+    const filteredUsers = computed(() => {
+      if (!searchQuery.value) return users.value
+      
+      const query = searchQuery.value.toLowerCase()
+      return users.value.filter(user => 
+        user.username.toLowerCase().includes(query) || 
+        user.email.toLowerCase().includes(query)
+      )
+    })
+
+    const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString()
     }
-  },
 
-  methods: {
-    formatDate(date) {
-      return new Date(date).toLocaleDateString()
-    },
-
-    capitalize(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1)
-    },
-
-    getRoleBadgeClass(role) {
+    const getRoleBadgeClass = (role) => {
       return {
-        'bg-warning': role === 'admin',
-        'bg-secondary': role === 'user'
+        'badge bg-danger': role === 'admin',
+        'badge bg-primary': role === 'user'
       }
-    },
+    }
 
-    async fetchUsers() {
+    const fetchUsers = async () => {
       try {
-        const response = await this.$axios.get('/admin/users')
-        this.users = response.data.users
-      } catch (error) {
-        console.error('Error fetching users:', error)
-        this.$toast.error('Failed to load users')
+        loading.value = true
+        const response = await axios.get('/api/admin/users')
+        
+        if (response.data.users) {
+          users.value = response.data.users
+        } else {
+          throw new Error('Failed to load users')
+        }
+      } catch (err) {
+        error.value = err.message || 'An error occurred while loading users'
+        console.error(err)
+      } finally {
+        loading.value = false
       }
-    },
+    }
 
-    async deleteUser(id) {
+    const toggleUserRole = async (user) => {
+      try {
+        const newRole = user.role === 'admin' ? 'user' : 'admin'
+        const response = await axios.put(`/api/admin/users/${user.id}/role`, {
+          role: newRole
+        })
+        
+        if (response.data.success) {
+          user.role = newRole
+        } else {
+          throw new Error(response.data.message || 'Failed to update user role')
+        }
+      } catch (err) {
+        alert(err.message || 'An error occurred while updating the user role')
+        console.error(err)
+      }
+    }
+
+    const deleteUser = async (id) => {
+      // Don't allow deleting yourself
+      if (id === currentUserId.value) {
+        return
+      }
+
       if (!confirm('Are you sure you want to delete this user?')) {
         return
       }
 
       try {
-        const response = await this.$axios.delete(`/admin/users/${id}`)
+        const response = await axios.delete(`/api/admin/users/${id}`)
+        
         if (response.data.success) {
-          this.$toast.success('User deleted successfully')
-          await this.fetchUsers()
+          // Remove the user from the list
+          users.value = users.value.filter(u => u.id !== id)
+        } else {
+          throw new Error(response.data.message || 'Failed to delete user')
         }
-      } catch (error) {
-        console.error('Error:', error)
-        this.$toast.error('Failed to delete user')
+      } catch (err) {
+        alert(err.message || 'An error occurred while deleting the user')
+        console.error(err)
       }
     }
-  },
 
-  created() {
-    this.fetchUsers()
+    onMounted(() => {
+      fetchUsers()
+    })
+
+    return {
+      users,
+      filteredUsers,
+      loading,
+      error,
+      searchQuery,
+      currentUserId,
+      formatDate,
+      getRoleBadgeClass,
+      toggleUserRole,
+      deleteUser
+    }
   }
 }
 </script>
