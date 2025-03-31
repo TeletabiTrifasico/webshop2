@@ -28,6 +28,12 @@ spl_autoload_register(function ($class) {
 
 session_start();
 
+// Handle method spoofing for HTML forms
+$_method = $_SERVER['REQUEST_METHOD'];
+if ($_method === 'POST' && isset($_GET['_method'])) {
+    $_method = strtoupper($_GET['_method']);
+}
+
 // API Routes configuration
 $apiRoutes = [
     // Auth routes
@@ -53,12 +59,47 @@ $apiRoutes = [
     '/api/admin/orders' => ['Api\AdminController', 'getOrders'],
 ];
 
+// Routes with specific HTTP methods
+$apiRoutesMethods = [
+    // Admin user routes
+    'PUT:/api/admin/users/(\d+)/role' => ['Api\AdminController', 'updateUserRole'],
+    'DELETE:/api/admin/users/(\d+)' => ['Api\AdminController', 'deleteUser'],
+    
+    // Admin order routes
+    'GET:/api/admin/orders/(\d+)' => ['Api\AdminController', 'getOrderDetails'],
+    'PUT:/api/admin/orders/(\d+)/status' => ['Api\AdminController', 'updateOrderStatus'],
+    'DELETE:/api/admin/orders/(\d+)' => ['Api\AdminController', 'deleteOrder'],
+    
+    // Admin product routes
+    'POST:/api/admin/products' => ['Api\AdminProductController', 'create'],
+    'PUT:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],
+    'POST:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],  // Allow POST for PUT with _method
+    'DELETE:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'delete'],
+];
+
 // Handle API requests
 if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
     $request = $_SERVER['REQUEST_URI'];
     $path = parse_url($request, PHP_URL_PATH);
     $path = rtrim($path, '/');
+    $method = $_method;  // Use the potentially spoofed method
 
+    // First check method-specific routes
+    $methodPath = "$method:$path";
+    foreach ($apiRoutesMethods as $pattern => [$controller, $action]) {
+        $methodPattern = explode(':', $pattern)[0];
+        $urlPattern = explode(':', $pattern)[1];
+        
+        if ($methodPattern === $method && preg_match("#^$urlPattern$#", $path, $matches)) {
+            $controller = "\\App\\Controllers\\$controller";
+            $controller = new $controller();
+            array_shift($matches);
+            call_user_func_array([$controller, $action], $matches);
+            exit;
+        }
+    }
+
+    // Then check general routes
     foreach ($apiRoutes as $pattern => [$controller, $method]) {
         if (preg_match("#^$pattern$#", $path, $matches)) {
             $controller = "\\App\\Controllers\\$controller";

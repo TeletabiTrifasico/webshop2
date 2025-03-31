@@ -7,6 +7,10 @@
       </router-link>
     </div>
 
+    <div v-if="error" class="alert alert-danger">
+      {{ error }}
+    </div>
+
     <div class="card shadow-sm">
       <div class="card-body">
         <form @submit.prevent="saveProduct">
@@ -53,29 +57,30 @@
 
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="productImage" class="form-label">Image URL</label>
+                <label for="productImage" class="form-label">Product Image</label>
                 <input 
-                  type="text" 
+                  type="file" 
                   class="form-control" 
                   id="productImage" 
-                  v-model="product.image"
-                  placeholder="https://example.com/image.jpg"
+                  @change="handleImageChange" 
+                  accept="image/*"
                 >
+                <small class="form-text text-muted">
+                  Supported formats: JPG, PNG, GIF, WEBP
+                </small>
               </div>
 
               <div class="mt-3 mb-4">
                 <label class="form-label d-block">Image Preview</label>
-                <div 
-                  class="border rounded p-2 bg-light text-center image-preview"
-                >
+                <div class="border rounded p-2 bg-light text-center image-preview">
                   <img 
-                    v-if="product.image" 
-                    :src="product.image" 
+                    v-if="imagePreview || product.image" 
+                    :src="imagePreview || product.image" 
                     alt="Product preview" 
                     class="img-fluid preview-image"
                   >
                   <div v-else class="placeholder-text">
-                    No image available
+                    No image selected
                   </div>
                 </div>
               </div>
@@ -123,6 +128,8 @@ export default {
     const isEditing = computed(() => !!productId.value)
     const loading = ref(false)
     const error = ref(null)
+    const imageFile = ref(null)
+    const imagePreview = ref(null)
 
     const product = ref({
       name: '',
@@ -131,14 +138,31 @@ export default {
       image: ''
     })
 
+    const handleImageChange = (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+      
+      imageFile.value = file
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        imagePreview.value = e.target.result
+      }
+      reader.readAsDataURL(file)
+    }
+
     const fetchProduct = async () => {
       if (!isEditing.value) return
 
       try {
         loading.value = true
         const response = await axios.get(`/api/products/${productId.value}`)
+        
         if (response.data.product) {
           product.value = response.data.product
+        } else {
+          throw new Error('Product not found')
         }
       } catch (err) {
         error.value = 'Failed to load product'
@@ -151,21 +175,43 @@ export default {
     const saveProduct = async () => {
       try {
         loading.value = true
-        let response
-
-        if (isEditing.value) {
-          response = await axios.put(`/api/admin/products/${productId.value}`, product.value)
-        } else {
-          response = await axios.post('/api/admin/products', product.value)
+        error.value = null
+        
+        // Create FormData for file upload
+        const formData = new FormData()
+        formData.append('name', product.value.name)
+        formData.append('description', product.value.description || '')
+        formData.append('price', product.value.price)
+        
+        if (imageFile.value) {
+          formData.append('image', imageFile.value)
         }
-
+        
+        let response
+        
+        if (isEditing.value) {
+          // For editing, use axios instead of fetch to handle FormData properly with PUT
+          response = await axios.post(`/api/admin/products/${productId.value}?_method=PUT`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+        } else {
+          // For creating new products
+          response = await axios.post('/api/admin/products', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          })
+        }
+        
         if (response.data.success) {
           router.push('/admin/products')
         } else {
-          throw new Error(response.data.message || 'Failed to save product')
+          throw new Error(response.data.error || 'Failed to save product')
         }
       } catch (err) {
-        error.value = err.message || 'An error occurred while saving the product'
+        error.value = err.response?.data?.error || err.message || 'An error occurred while saving the product'
         console.error(err)
       } finally {
         loading.value = false
@@ -181,6 +227,8 @@ export default {
       isEditing,
       loading,
       error,
+      imagePreview,
+      handleImageChange,
       saveProduct
     }
   }

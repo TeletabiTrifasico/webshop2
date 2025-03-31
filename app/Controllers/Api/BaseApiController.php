@@ -5,33 +5,57 @@ namespace App\Controllers\Api;
 use App\Controllers\Controller;
 
 class BaseApiController extends Controller {
-    protected function jsonResponse($data, $status = 200) {
+    protected function jsonResponse($data, $statusCode = 200) {
+        http_response_code($statusCode);
         header('Content-Type: application/json');
-        header('Access-Control-Allow-Origin: *');
-        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization');
-        http_response_code($status);
-        echo json_encode($data, JSON_PRETTY_PRINT);
+        echo json_encode($data);
         exit;
     }
-
+    
     protected function getRequestData() {
-        try {
-            $rawData = file_get_contents('php://input');
-            error_log('Raw request data: ' . $rawData);
-            
-            $data = json_decode($rawData, true);
-            
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                error_log('JSON decode error: ' . json_last_error_msg());
-                throw new \Exception('Invalid JSON data');
+        $method = $_SERVER['REQUEST_METHOD'];
+        
+        // For PUT requests, get data from php://input
+        if ($method === 'PUT') {
+            // Check if Content-Type contains multipart/form-data
+            if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+                // Handle multipart form data for PUT
+                parse_str(file_get_contents('php://input'), $_PUT);
+                
+                // Merge with $_FILES for uploaded files
+                $data = $_PUT;
+                // Files are already in $_FILES
+            } else {
+                // Regular JSON data
+                $input = file_get_contents('php://input');
+                $data = json_decode($input, true) ?? [];
             }
-            
-            error_log('Parsed request data: ' . print_r($data, true));
-            return $data ?: [];
-        } catch (\Exception $e) {
-            error_log('Request data error: ' . $e->getMessage());
-            return [];
+        } 
+        // For POST requests, check if it's multipart/form-data
+        else if ($method === 'POST') {
+            if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
+                // For multipart/form-data, data is in $_POST
+                $data = $_POST;
+                // Files are in $_FILES
+            } else if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
+                // For JSON data
+                $input = file_get_contents('php://input');
+                $data = json_decode($input, true) ?? [];
+            } else {
+                // Default to $_POST
+                $data = $_POST;
+            }
+        } else {
+            // For other methods
+            $input = file_get_contents('php://input');
+            $data = json_decode($input, true) ?? [];
         }
+        
+        return $data;
+    }
+    
+    protected function model($model) {
+        $model = "\\App\\Models\\$model";
+        return new $model();
     }
 }
