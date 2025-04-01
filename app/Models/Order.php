@@ -17,8 +17,55 @@ class Order extends Model {
         return $stmt->fetchAll();
     }
 
-    public function getAllWithUserDetails() {
-        return $this->getAll(); // Using existing method as it already includes user details
+    public function getAllWithUserDetails($page = 1, $limit = 10, $search = '') {
+        $offset = ($page - 1) * $limit;
+        
+        $query = "SELECT o.*, u.username FROM {$this->table} o 
+                  JOIN users u ON o.user_id = u.id";
+        $params = [];
+        
+        // Add search functionality
+        if (!empty($search)) {
+            $query .= " WHERE o.id LIKE ? OR u.username LIKE ? OR o.status LIKE ?";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+        }
+        
+        $query .= " ORDER BY o.created_at DESC LIMIT ? OFFSET ?";
+        
+        $stmt = $this->pdo->prepare($query);
+        
+        // Bind parameters with specific types
+        if (!empty($params)) {
+            foreach ($params as $i => $param) {
+                $stmt->bindValue($i + 1, $param);
+            }
+        }
+        
+        // Bind limit and offset as integers
+        $stmt->bindValue(count($params) + 1, (int)$limit, \PDO::PARAM_INT);
+        $stmt->bindValue(count($params) + 2, (int)$offset, \PDO::PARAM_INT);
+        
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function getTotal($search = '') {
+        $query = "SELECT COUNT(*) as total FROM {$this->table} o JOIN users u ON o.user_id = u.id";
+        $params = [];
+        
+        if (!empty($search)) {
+            $query .= " WHERE o.id LIKE ? OR u.username LIKE ? OR o.status LIKE ?";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+        }
+        
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute($params);
+        $result = $stmt->fetch();
+        return (int)$result['total'];
     }
 
     public function getWithDetails($id) {

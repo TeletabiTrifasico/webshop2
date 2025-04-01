@@ -12,6 +12,22 @@ class Model {
         $this->pdo = $pdo;
     }
 
+    protected function executeWithIntParams($query, $params = []) {
+        $stmt = $this->pdo->prepare($query);
+        
+        foreach ($params as $key => $value) {
+            // If this is a numeric index for a LIMIT or OFFSET, bind as integer
+            if (is_integer($value) || (is_string($value) && is_numeric($value))) {
+                $stmt->bindValue($key + 1, (int)$value, \PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key + 1, $value);
+            }
+        }
+        
+        $stmt->execute();
+        return $stmt;
+    }
+
     public function toArray($data) {
         return json_decode(json_encode($data), true);
     }
@@ -55,6 +71,8 @@ class Model {
     }
 
     public function paginate($page = 1, $perPage = 15, $conditions = []) {
+        $page = (int)$page;
+        $perPage = (int)$perPage;
         $offset = ($page - 1) * $perPage;
         
         $where = '';
@@ -68,20 +86,22 @@ class Model {
         }
         
         // Get total count
-        $countStmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM {$this->table} {$where}"
+        $countParams = $params;
+        $countStmt = $this->executeWithIntParams(
+            "SELECT COUNT(*) as total FROM {$this->table} {$where}",
+            $countParams
         );
-        $countStmt->execute($params);
         $total = $countStmt->fetchColumn();
         
-        // Get paginated results
+        // Add limit and offset to params
         $params[] = $perPage;
         $params[] = $offset;
         
-        $stmt = $this->pdo->prepare(
-            "SELECT * FROM {$this->table} {$where} LIMIT ? OFFSET ?"
+        // Get paginated results
+        $stmt = $this->executeWithIntParams(
+            "SELECT * FROM {$this->table} {$where} LIMIT ? OFFSET ?",
+            $params
         );
-        $stmt->execute($params);
         
         return [
             'data' => $stmt->fetchAll(),

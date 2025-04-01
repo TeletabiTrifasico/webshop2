@@ -31,15 +31,37 @@ class AdminController extends BaseApiController {
     public function getUsers() {
         $this->checkAdmin();
         
-        $users = $this->userModel->getAll();
+        // Get pagination parameters
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $search = isset($_GET['search']) ? $_GET['search'] : '';
         
+        // Validate page and limit
+        if ($page < 1) $page = 1;
+        if ($limit < 1 || $limit > 100) $limit = 10;
+        
+        // Get paginated users
+        $users = $this->userModel->getAll($page, $limit, $search);
+        
+        // Get total for pagination metadata
+        $total = $this->userModel->getTotal($search);
+        
+        // Remove password from response
         foreach ($users as &$user) {
             unset($user['password']);
         }
         
         $this->jsonResponse([
             'success' => true,
-            'users' => $users
+            'users' => $users,
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $limit,
+                'current_page' => $page,
+                'last_page' => ceil($total / $limit),
+                'from' => ($page - 1) * $limit + 1,
+                'to' => min($page * $limit, $total)
+            ]
         ]);
     }
 
@@ -113,11 +135,32 @@ class AdminController extends BaseApiController {
     public function getOrders() {
         $this->checkAdmin();
         
-        $orders = $this->orderModel->getAllWithUserDetails();
+        // Get pagination parameters
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $search = isset($_GET['search']) ? $_GET['search'] : '';
+        
+        // Validate page and limit
+        if ($page < 1) $page = 1;
+        if ($limit < 1 || $limit > 100) $limit = 10;
+        
+        // Get paginated orders
+        $orders = $this->orderModel->getAllWithUserDetails($page, $limit, $search);
+        
+        // Get total for pagination metadata
+        $total = $this->orderModel->getTotal($search);
         
         $this->jsonResponse([
             'success' => true,
-            'orders' => $orders
+            'orders' => $orders,
+            'pagination' => [
+                'total' => $total,
+                'per_page' => $limit,
+                'current_page' => $page,
+                'last_page' => ceil($total / $limit),
+                'from' => ($page - 1) * $limit + 1,
+                'to' => min($page * $limit, $total)
+            ]
         ]);
     }
     
