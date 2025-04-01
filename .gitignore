@@ -20,6 +20,8 @@ Thumbs.db
 # Cache and temporary files
 /public/images/products
 /public/images/cache/*
+/public/uploads
+/public/uploads/*
 !public/images/cache/.gitkeep
 /public/dist
 /node_modules
