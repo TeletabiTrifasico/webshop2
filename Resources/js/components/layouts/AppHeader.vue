@@ -23,7 +23,7 @@
         <ul class="navbar-nav align-items-center">
           <template v-if="isAuthenticated">
             <li class="nav-item me-3 position-relative">
-              <router-link to="/cart" class="nav-link">
+              <router-link to="/cart" class="nav-link cart-link">
                 <i class="fas fa-shopping-cart"></i>
                 <span v-if="cartCount > 0" class="badge bg-danger cart-count">
                   {{ cartCount }}
@@ -107,3 +107,24 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.cart-link {
+    position: relative;
+    padding-right: 8px;
+}
+  
+.cart-count {
+    position: absolute;
+    top: 5px;
+    right: -8px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 11px;
+    border-radius: 15%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0px;
+}
+</style>
