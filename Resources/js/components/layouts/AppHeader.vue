@@ -107,35 +107,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.btn-outline-danger {
-  border-color: #dc3545;
-  color: #dc3545;
-  transition: all 0.3s ease;
-}
-
-.btn-outline-danger:hover {
-  background-color: #dc3545;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
-}
-
-.nav-link {
-  transition: color 0.3s ease;
-}
-
-.nav-link:hover {
-  color: #fff;
-}
-
-.cart-count {
-  position: absolute;
-  top: 0;
-  right: 0;
-  transform: translate(25%, -25%);
-  font-size: 0.6rem;
-  padding: 0.2rem 0.4rem;
-}
-</style>

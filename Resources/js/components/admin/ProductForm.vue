@@ -234,24 +234,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.image-preview {
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.preview-image {
-  max-height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-}
-
-.placeholder-text {
-  color: #adb5bd;
-  font-size: 0.9rem;
-}
-</style>

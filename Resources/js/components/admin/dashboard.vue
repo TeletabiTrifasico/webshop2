@@ -1,60 +1,60 @@
 <template>
   <div class="container-fluid mt-4">
-    <h1 class="mb-4">Admin Dashboard</h1>
+    <h1 class="admin-title mb-4">Admin Dashboard</h1>
     
     <div class="row">
       <!-- Stats Cards -->
       <div class="col-md-3 mb-4">
-        <div class="card bg-primary text-white shadow">
+        <div class="card stat-card bg-primary shadow admin-card">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <h6 class="text-white-50">Total Orders</h6>
-                <h2 class="mb-0">{{ stats.totalOrders }}</h2>
+                <h6 class="stat-title">Total Orders</h6>
+                <h2 class="stat-value mb-0">{{ stats.totalOrders }}</h2>
               </div>
-              <i class="fas fa-shopping-bag fa-2x text-white-50"></i>
+              <i class="fas fa-shopping-bag stat-icon"></i>
             </div>
           </div>
         </div>
       </div>
 
       <div class="col-md-3 mb-4">
-        <div class="card bg-success text-white shadow">
+        <div class="card stat-card bg-success shadow admin-card">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <h6 class="text-white-50">Revenue</h6>
-                <h2 class="mb-0">${{ formatPrice(stats.revenue) }}</h2>
+                <h6 class="stat-title">Revenue</h6>
+                <h2 class="stat-value mb-0">${{ formatPrice(stats.revenue) }}</h2>
               </div>
-              <i class="fas fa-dollar-sign fa-2x text-white-50"></i>
+              <i class="fas fa-dollar-sign stat-icon"></i>
             </div>
           </div>
         </div>
       </div>
 
       <div class="col-md-3 mb-4">
-        <div class="card bg-info text-white shadow">
+        <div class="card stat-card bg-info shadow admin-card">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <h6 class="text-white-50">Users</h6>
-                <h2 class="mb-0">{{ stats.totalUsers }}</h2>
+                <h6 class="stat-title">Users</h6>
+                <h2 class="stat-value mb-0">{{ stats.totalUsers }}</h2>
               </div>
-              <i class="fas fa-users fa-2x text-white-50"></i>
+              <i class="fas fa-users stat-icon"></i>
             </div>
           </div>
         </div>
       </div>
 
       <div class="col-md-3 mb-4">
-        <div class="card bg-warning text-white shadow">
+        <div class="card stat-card bg-warning shadow admin-card">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
               <div>
-                <h6 class="text-white-50">Products</h6>
-                <h2 class="mb-0">{{ stats.totalProducts }}</h2>
+                <h6 class="stat-title">Products</h6>
+                <h2 class="stat-value mb-0">{{ stats.totalProducts }}</h2>
               </div>
-              <i class="fas fa-box fa-2x text-white-50"></i>
+              <i class="fas fa-box stat-icon"></i>
             </div>
           </div>
         </div>
@@ -62,7 +62,7 @@
     </div>
 
     <!-- Recent Orders -->
-    <div class="card mb-4 shadow-sm">
+    <div class="card admin-card shadow-sm">
       <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
         <h5 class="mb-0">Recent Orders</h5>
         <router-link to="/admin/orders" class="btn btn-sm btn-primary">
@@ -76,7 +76,7 @@
           </div>
         </div>
         <div v-else class="table-responsive">
-          <table class="table table-hover">
+          <table class="table admin-table table-hover">
             <thead>
               <tr>
                 <th>Order ID</th>
@@ -90,20 +90,20 @@
             <tbody>
               <tr v-for="order in recentOrders" :key="order.id">
                 <td>
-                  <router-link :to="`/admin/orders/${order.id}`" class="fw-bold text-decoration-none">
+                  <router-link :to="`/admin/orders/${order.id}`" class="order-id">
                     #{{ order.id }}
                   </router-link>
                 </td>
                 <td>{{ order.username }}</td>
                 <td>${{ formatPrice(order.total_amount) }}</td>
                 <td>
-                  <span :class="getStatusBadgeClass(order.status)">
+                  <span class="badge" :class="getStatusBadgeClass(order.status)">
                     {{ order.status }}
                   </span>
                 </td>
                 <td>{{ formatDate(order.created_at) }}</td>
                 <td>
-                  <router-link :to="`/admin/orders/${order.id}`" class="btn btn-sm btn-primary me-2">
+                  <router-link :to="`/admin/orders/${order.id}`" class="btn btn-sm btn-primary">
                     <i class="fas fa-eye"></i>
                   </router-link>
                 </td>
@@ -118,7 +118,7 @@
     </div>
     
     <!-- Recent Users -->
-    <div class="card mb-4 shadow-sm">
+    <div class="card admin-card shadow-sm mt-4">
       <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
         <h5 class="mb-0">Recent Users</h5>
         <router-link to="/admin/users" class="btn btn-sm btn-primary">
@@ -132,7 +132,7 @@
           </div>
         </div>
         <div v-else class="table-responsive">
-          <table class="table table-hover">
+          <table class="table admin-table table-hover">
             <thead>
               <tr>
                 <th>ID</th>
@@ -149,20 +149,15 @@
                 <td>{{ user.username }}</td>
                 <td>{{ user.email }}</td>
                 <td>
-                  <span :class="getRoleBadgeClass(user.role)">
+                  <span class="badge" :class="getRoleBadgeClass(user.role)">
                     {{ user.role }}
                   </span>
                 </td>
                 <td>{{ formatDate(user.created_at) }}</td>
-                <td>
-                  <div class="btn-group">
-                    <router-link :to="`/admin/users/edit/${user.id}`" class="btn btn-sm btn-primary me-2">
-                      <i class="fas fa-edit"></i>
-                    </router-link>
-                    <router-link :to="`/admin/users`" class="btn btn-sm btn-secondary">
-                      <i class="fas fa-users"></i>
-                    </router-link>
-                  </div>
+                <td class="user-actions">
+                  <router-link :to="`/admin/users/edit/${user.id}`" class="btn btn-sm btn-primary">
+                    <i class="fas fa-edit"></i>
+                  </router-link>
                 </td>
               </tr>
               <tr v-if="recentUsers.length === 0">
@@ -175,7 +170,7 @@
     </div>
 
     <!-- Products -->
-    <div class="card shadow-sm">
+    <div class="card admin-card shadow-sm mt-4">
       <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
         <h5 class="mb-0">Recent Products</h5>
         <router-link to="/admin/products" class="btn btn-sm btn-primary">
@@ -189,7 +184,7 @@
           </div>
         </div>
         <div v-else class="table-responsive">
-          <table class="table table-hover">
+          <table class="table admin-table table-hover">
             <thead>
               <tr>
                 <th>Image</th>
@@ -207,7 +202,7 @@
                 <td>{{ product.name }}</td>
                 <td>${{ formatPrice(product.price) }}</td>
                 <td>
-                  <router-link :to="`/admin/products/edit/${product.id}`" class="btn btn-sm btn-primary me-2">
+                  <router-link :to="`/admin/products/edit/${product.id}`" class="btn btn-sm btn-primary">
                     <i class="fas fa-edit"></i>
                   </router-link>
                 </td>
@@ -253,17 +248,18 @@ export default {
     
     getStatusBadgeClass(status) {
       return {
-        'badge bg-success': status === 'completed',
-        'badge bg-warning text-dark': status === 'pending',
-        'badge bg-info text-dark': status === 'processing',
-        'badge bg-danger': status === 'cancelled'
+        'bg-success': status === 'completed' || status === 'delivered', 
+        'bg-warning text-dark': status === 'pending',
+        'bg-info text-dark': status === 'processing',
+        'bg-primary': status === 'shipped',
+        'bg-danger': status === 'cancelled'
       }
     },
     
     getRoleBadgeClass(role) {
       return {
-        'badge bg-danger': role === 'admin',
-        'badge bg-primary': role === 'user'
+        'bg-danger': role === 'admin',
+        'bg-primary': role === 'user'
       }
     },
     
@@ -312,46 +308,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.card {
-  transition: all 0.3s ease;
-  border: none;
-  border-radius: 0.5rem;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-
-.table th {
-  font-weight: 600;
-  color: #495057;
-}
-
-.table td {
-  vertical-align: middle;
-}
-
-.badge {
-  padding: 0.5em 0.75em;
-  font-weight: 500;
-}
-
-.bg-primary, .bg-success, .bg-info, .bg-warning {
-  position: relative;
-  overflow: hidden;
-}
-
-.bg-primary::after, .bg-success::after, .bg-info::after, .bg-warning::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 100px;
-  height: 100%;
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 100%);
-  transform: skewX(-15deg) translateX(50%);
-}
-</style>

@@ -1,3 +1,9 @@
+/* 
+ * WebShop Styles
+ * Built on top of Bootstrap 5
+ * All custom styles are consolidated in this file
+ */
+
 /* Base Styles */
 html, body {
     height: 100%;
@@ -21,7 +27,7 @@ body {
 }
 
 .container {
-    width: 80%;
+    width: 100%;
     margin: auto;
     overflow: hidden;
 }
@@ -41,17 +47,22 @@ body {
 .nav-link {
     font-size: 1.1rem;
     padding: 0.5rem 1rem !important;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #fff;
 }
 
 .nav-item {
     position: relative;
 }
 
-/* Update the cart badge styles */
+/* Cart Badge */
 .cart-count {
     position: absolute;
-    top: 10;
-    right: -10px;
+    top: 0;
+    right: 0;
     min-width: 18px;
     height: 18px;
     font-size: 11px;
@@ -60,7 +71,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 2px 4px;
-    transform: translateY(-50%);
+    transform: translate(25%, -25%);
     z-index: 1000;
     transition: all 0.3s ease;
 }
@@ -69,11 +80,33 @@ body {
     opacity: 0;
 }
 
+/* Button Styles */
+.btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
 /* Cards and Products */
 .card {
     height: 100%;
     display: flex;
     flex-direction: column;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0,0,0,.125);
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 .card-body {
@@ -96,11 +129,24 @@ body {
     height: 200px;
     object-fit: cover;
     width: 100%;
+    transition: transform 0.3s ease;
 }
 
 .product-detail-img {
     max-height: 400px;
     object-fit: contain;
+}
+
+/* Image Placeholder */
+.image-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    font-size: 1.5rem;
 }
 
 /* Shopping Cart */
@@ -134,6 +180,9 @@ body {
 
 /* Toast Notifications */
 .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
     min-width: 250px;
     z-index: 1100;
 }
@@ -172,4 +221,283 @@ footer {
     padding: 4rem 2rem;
     margin-bottom: 2rem;
     border-radius: .3rem;
+}
+
+/* Admin Dashboard */
+.admin-card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    color: white;
+}
+
+.bg-primary::after, 
+.bg-success::after, 
+.bg-info::after, 
+.bg-warning::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 100%);
+    transform: skewX(-15deg) translateX(50%);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.stat-title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0;
+}
+
+/* Admin Order Tables */
+.admin-table {
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.admin-table th {
+    font-weight: 600;
+    color: #495057;
+    border-top: none;
+}
+
+.admin-table td {
+    vertical-align: middle;
+}
+
+.order-id {
+    font-weight: 600;
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.order-id:hover {
+    text-decoration: underline;
+}
+
+.status-badge {
+    padding: 0.5em 0.75em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+}
+
+/* Product Form Preview */
+.image-preview {
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+}
+
+.preview-image {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.placeholder-text {
+    color: #adb5bd;
+    font-size: 0.9rem;
+}
+
+/* Status Badges */
+.badge {
+    padding: 0.5em 0.75em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+}
+
+/* Badge colors - ensure they match Bootstrap's classes */
+.badge.bg-success {
+    background-color: #198754 !important;
+    color: white;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: white;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: white;
+}
+
+.badge.text-dark {
+    color: #212529 !important;
+}
+
+/* Role badges classes */
+.badge.role-badge-admin {
+    background-color: #dc3545 !important;
+    color: white;
+}
+
+.badge.role-badge-user {
+    background-color: #0d6efd !important;
+    color: white;
+}
+
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Form Controls */
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Table Styles */
+.table th {
+    font-weight: 600;
+    color: #495057;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Admin specific */
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.admin-title {
+    margin-bottom: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Order details page */
+.order-info-card {
+    margin-bottom: 1.5rem;
+}
+
+.order-info-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.order-info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.order-info-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.order-items {
+    margin-top: 1.5rem;
+}
+
+.order-items-table {
+    border-top: none;
+}
+
+.order-items-header {
+    background-color: #f8f9fa;
+}
+
+.order-total-row {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* User management */
+.role-badge-admin {
+    background-color: #dc3545;
+}
+
+.role-badge-user {
+    background-color: #0d6efd;
+}
+
+.user-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .card-img-top {
+        height: 150px;
+    }
+    
+    .admin-card {
+        margin-bottom: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .order-info-row {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
 }
