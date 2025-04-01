@@ -110,11 +110,7 @@ $apiRoutes = [
     
     // Cart routes
     '/api/cart' => ['Api\CartController', 'index'],
-    '/api/cart/add' => ['Api\CartController', 'add'],
-    '/api/cart/update' => ['Api\CartController', 'update'],
-    '/api/cart/remove' => ['Api\CartController', 'remove'],
-    '/api/cart/clear' => ['Api\CartController', 'clear'],
-    '/api/cart/checkout' => ['Api\CartController', 'checkout'],
+    '/api/cart/items' => ['Api\CartController', 'getCartItems'],
     
     // Admin routes
     '/api/admin/users' => ['Api\AdminController', 'getUsers'],
@@ -142,6 +138,15 @@ $apiRoutesMethods = [
     'PUT:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],
     'POST:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],  // Allow POST for PUT with _method
     'DELETE:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'delete'],
+    
+    // Cart routes with methods
+    'GET:/api/cart' => ['Api\CartController', 'index'],
+    'GET:/api/cart/items' => ['Api\CartController', 'getCartItems'],
+    'POST:/api/cart/add' => ['Api\CartController', 'addItem'],
+    'POST:/api/cart/update' => ['Api\CartController', 'updateItem'],
+    'POST:/api/cart/remove' => ['Api\CartController', 'removeItem'],
+    'POST:/api/cart/clear' => ['Api\CartController', 'clearCart'],
+    'POST:/api/cart/checkout' => ['Api\CartController', 'checkout'],
 ];
 
 // Handle API requests

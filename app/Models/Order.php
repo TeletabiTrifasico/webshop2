@@ -36,11 +36,9 @@ class Order extends Model {
         
         $stmt = $this->pdo->prepare($query);
         
-        // Bind parameters with specific types
-        if (!empty($params)) {
-            foreach ($params as $i => $param) {
-                $stmt->bindValue($i + 1, $param);
-            }
+        // Bind parameters
+        foreach ($params as $i => $param) {
+            $stmt->bindValue($i + 1, $param);
         }
         
         // Bind limit and offset as integers
@@ -63,19 +61,24 @@ class Order extends Model {
         }
         
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute($params);
+        
+        foreach ($params as $i => $param) {
+            $stmt->bindValue($i + 1, $param);
+        }
+        
+        $stmt->execute();
         $result = $stmt->fetch();
         return (int)$result['total'];
     }
 
-    public function getWithDetails($id) {
+    public function getWithDetails($orderId) {
         $stmt = $this->pdo->prepare("
-            SELECT o.*, u.username, u.email
-            FROM orders o 
-            JOIN users u ON o.user_id = u.id 
+            SELECT o.*, u.username 
+            FROM {$this->table} o
+            JOIN users u ON o.user_id = u.id
             WHERE o.id = ?
         ");
-        $stmt->execute([$id]);
+        $stmt->execute([(int)$orderId]);
         return $stmt->fetch();
     }
 
@@ -121,15 +124,31 @@ class Order extends Model {
         }
     }
 
-    public function getByUserId($userId) {
+    public function getUserOrders($userId, $page = 1, $limit = 10) {
+        $offset = ($page - 1) * $limit;
+        
         $stmt = $this->pdo->prepare("
-            SELECT * FROM {$this->table}
-            WHERE user_id = ?
-            ORDER BY created_at DESC
+            SELECT * FROM {$this->table} 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
         ");
         
-        $stmt->execute([$userId]);
+        $stmt->bindValue(1, (int)$userId, \PDO::PARAM_INT);
+        $stmt->bindValue(2, (int)$limit, \PDO::PARAM_INT);
+        $stmt->bindValue(3, (int)$offset, \PDO::PARAM_INT);
+        
+        $stmt->execute();
         return $stmt->fetchAll();
+    }
+
+    public function getTotalUserOrders($userId) {
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as total FROM {$this->table} 
+            WHERE user_id = ?
+        ");
+        $stmt->execute([(int)$userId]);
+        return (int)$stmt->fetchColumn();
     }
 
     public function findById($id) {
@@ -143,11 +162,11 @@ class Order extends Model {
         return $stmt->fetch();
     }
 
-    public function updateStatus($id, $status) {
+    public function updateStatus($orderId, $status) {
         $stmt = $this->pdo->prepare("
             UPDATE {$this->table} SET status = ? WHERE id = ?
         ");
-        return $stmt->execute([$status, $id]);
+        return $stmt->execute([$status, (int)$orderId]);
     }
 
     public function delete($id) {
@@ -168,5 +187,13 @@ class Order extends Model {
             $this->pdo->rollBack();
             return false;
         }
+    }
+
+    public function getTotalRevenue() {
+        $stmt = $this->pdo->prepare("
+            SELECT SUM(total_amount) as total FROM {$this->table}
+        ");
+        $stmt->execute();
+        return (float)($stmt->fetchColumn() ?: 0);
     }
 }

@@ -9,9 +9,10 @@
 </template>
 
 <script>
-import { mapState, mapActions } from 'vuex'
 import AppHeader from './components/layouts/AppHeader.vue'
 import AppFooter from './components/layouts/AppFooter.vue'
+import { onMounted, watch } from 'vue'
+import { useStore } from 'vuex'
 
 export default {
   name: 'App',
@@ -21,9 +22,26 @@ export default {
     AppFooter
   },
   
-  computed: {
-    ...mapState('auth', ['user']),
-    ...mapState('cart', ['count as cartCount'])
+  setup() {
+    const store = useStore()
+    
+    // Watch for authentication changes and fetch cart data accordingly
+    watch(() => store.getters['auth/isAuthenticated'], (isAuthenticated) => {
+      if (isAuthenticated) {
+        store.dispatch('cart/fetchCart')
+      } else {
+        store.commit('cart/clearCart')
+      }
+    })
+    
+    onMounted(() => {
+      // Initial cart fetch if user is authenticated
+      if (store.getters['auth/isAuthenticated']) {
+        store.dispatch('cart/fetchCart')
+      }
+    })
+    
+    return {}
   }
 }
 </script>

@@ -10,7 +10,12 @@ axios.defaults.baseURL = window.location.origin
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
 
 // Initialize authentication from localStorage
-store.dispatch('auth/initAuth')
+store.dispatch('auth/initAuth').then(() => {
+  // After auth is initialized, fetch the cart
+  if (store.getters['auth/isAuthenticated']) {
+    store.dispatch('cart/fetchCart')
+  }
+})
 
 const app = createApp(App)
 
