@@ -113,6 +113,7 @@ $apiRoutes = [
     '/api/cart/items' => ['Api\CartController', 'getCartItems'],
     
     // Admin routes
+    '/api/admin/dashboard/stats' => ['Api\AdminController', 'getDashboardStats'],
     '/api/admin/users' => ['Api\AdminController', 'getUsers'],
     '/api/admin/orders' => ['Api\AdminController', 'getOrders'],
 ];
@@ -120,11 +121,9 @@ $apiRoutes = [
 // Routes with specific HTTP methods
 $apiRoutesMethods = [
     // User management routes
-    'GET:/api/admin/users/(\d+)' => ['Api\UserAdminController', 'getUser'],
-    'POST:/api/admin/users' => ['Api\UserAdminController', 'create'],
+    'GET:/api/admin/users/(\d+)' => ['Api\AdminController', 'getUser'],
+    'POST:/api/admin/users' => ['Api\AdminController', 'createUser'],
     'PUT:/api/admin/users/(\d+)' => ['Api\UserAdminController', 'update'],
-    
-    // Admin user routes
     'PUT:/api/admin/users/(\d+)/role' => ['Api\AdminController', 'updateUserRole'],
     'DELETE:/api/admin/users/(\d+)' => ['Api\AdminController', 'deleteUser'],
     
@@ -134,10 +133,10 @@ $apiRoutesMethods = [
     'DELETE:/api/admin/orders/(\d+)' => ['Api\AdminController', 'deleteOrder'],
     
     // Admin product routes
-    'POST:/api/admin/products' => ['Api\AdminProductController', 'create'],
-    'PUT:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],
+    'POST:/api/admin/products' => ['Api\ProductController', 'create'],
+    'PUT:/api/admin/products/(\d+)' => ['Api\ProductController', 'update'],
     'POST:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],  // Allow POST for PUT with _method
-    'DELETE:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'delete'],
+    'DELETE:/api/admin/products/(\d+)' => ['Api\ProductController', 'delete'],
     
     // Cart routes with methods
     'GET:/api/cart' => ['Api\CartController', 'index'],

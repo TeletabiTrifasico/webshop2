@@ -49,29 +49,33 @@ class AdminController extends BaseApiController {
         $limit = isset($_GET['limit']) ? min(100, max(1, (int)$_GET['limit'])) : 10;
         $search = isset($_GET['search']) ? $_GET['search'] : '';
         
-        // Get paginated users
-        $users = $this->userModel->getAll($page, $limit, $search);
-        
-        // Get total for pagination metadata
-        $total = $this->userModel->getTotal($search);
-        
-        // Remove password from response
-        foreach ($users as &$user) {
-            unset($user['password']);
+        try {
+            // Get paginated users
+            $users = $this->userModel->getAll($page, $limit, $search);
+            
+            // Get total for pagination metadata
+            $total = $this->userModel->getTotal($search);
+            
+            // Remove password from response
+            foreach ($users as &$user) {
+                unset($user['password']);
+            }
+            
+            $this->jsonResponse([
+                'success' => true,
+                'users' => $users,
+                'pagination' => [
+                    'total' => $total,
+                    'per_page' => $limit,
+                    'current_page' => $page,
+                    'last_page' => ceil($total / $limit),
+                    'from' => ($page - 1) * $limit + 1,
+                    'to' => min($page * $limit, $total)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->handleException($e, 'Failed to fetch users');
         }
-        
-        $this->jsonResponse([
-            'success' => true,
-            'users' => $users,
-            'pagination' => [
-                'total' => $total,
-                'per_page' => $limit,
-                'current_page' => $page,
-                'last_page' => ceil($total / $limit),
-                'from' => ($page - 1) * $limit + 1,
-                'to' => min($page * $limit, $total)
-            ]
-        ]);
     }
 
     // Update user role

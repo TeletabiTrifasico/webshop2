@@ -219,6 +219,8 @@
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: 'AdminDashboard',
   
@@ -267,33 +269,30 @@ export default {
       try {
         this.loading = true
         
-        // Fetch orders
-        const ordersResponse = await fetch('/api/admin/orders')
-        const ordersData = await ordersResponse.json()
-        if (ordersData.orders) {
-          this.recentOrders = ordersData.orders.slice(0, 5)
-          this.stats.totalOrders = ordersData.orders.length
+        // Fetch orders using axios instead of fetch
+        const ordersResponse = await axios.get('/api/admin/orders')
+        if (ordersResponse.data.orders) {
+          this.recentOrders = ordersResponse.data.orders.slice(0, 5)
+          this.stats.totalOrders = ordersResponse.data.pagination.total
           
           // Calculate revenue
-          this.stats.revenue = ordersData.orders.reduce((total, order) => {
+          this.stats.revenue = ordersResponse.data.orders.reduce((total, order) => {
             return total + Number(order.total_amount)
           }, 0)
         }
         
-        // Fetch users
-        const usersResponse = await fetch('/api/admin/users')
-        const usersData = await usersResponse.json()
-        if (usersData.users) {
-          this.recentUsers = usersData.users.slice(0, 5)
-          this.stats.totalUsers = usersData.users.length
+        // Fetch users using axios instead of fetch
+        const usersResponse = await axios.get('/api/admin/users')
+        if (usersResponse.data.users) {
+          this.recentUsers = usersResponse.data.users.slice(0, 5)
+          this.stats.totalUsers = usersResponse.data.pagination.total
         }
         
-        // Fetch products
-        const productsResponse = await fetch('/api/products')
-        const productsData = await productsResponse.json()
-        if (productsData.products) {
-          this.products = productsData.products.slice(0, 5)
-          this.stats.totalProducts = productsData.products.length
+        // Fetch products using axios instead of fetch
+        const productsResponse = await axios.get('/api/products')
+        if (productsResponse.data.products) {
+          this.products = productsResponse.data.products.slice(0, 5)
+          this.stats.totalProducts = productsResponse.data.products.length
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
