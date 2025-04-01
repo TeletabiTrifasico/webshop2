@@ -1,6 +1,6 @@
 <template>
   <div class="container mt-4">
-    <h1 class="mb-4">Checkout</h1>
+    <h1 class="mb-4">Order Confirmation</h1>
     
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border" role="status">
@@ -8,83 +8,55 @@
       </div>
       <p class="mt-3">Processing your order...</p>
     </div>
+
+    <div v-else-if="error" class="alert alert-danger">
+      {{ error }}
+    </div>
     
     <div v-else class="row">
-      <div class="col-md-8">
+      <div class="col-md-7">
         <div class="card mb-4">
           <div class="card-header bg-white">
-            <h5 class="mb-0">Shipping Information</h5>
+            <h5 class="mb-0">Order Items</h5>
           </div>
-          <div class="card-body">
-            <form @submit.prevent="placeOrder">
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="firstName" class="form-label">First Name</label>
-                  <input type="text" class="form-control" id="firstName" v-model="form.firstName" required>
-                </div>
-                <div class="col-md-6">
-                  <label for="lastName" class="form-label">Last Name</label>
-                  <input type="text" class="form-control" id="lastName" v-model="form.lastName" required>
-                </div>
-              </div>
-              
-              <div class="mb-3">
-                <label for="address" class="form-label">Address</label>
-                <input type="text" class="form-control" id="address" v-model="form.address" required>
-              </div>
-              
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="city" class="form-label">City</label>
-                  <input type="text" class="form-control" id="city" v-model="form.city" required>
-                </div>
-                <div class="col-md-4">
-                  <label for="state" class="form-label">State</label>
-                  <input type="text" class="form-control" id="state" v-model="form.state" required>
-                </div>
-                <div class="col-md-2">
-                  <label for="zip" class="form-label">ZIP</label>
-                  <input type="text" class="form-control" id="zip" v-model="form.zip" required>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              <div v-for="item in cartItems" 
+                   :key="item.id" 
+                   class="list-group-item py-3">
+                <div class="row align-items-center">
+                  <div class="col-md-2">
+                    <img :src="item.product.image" 
+                         :alt="item.product.name"
+                         class="img-fluid rounded">
+                  </div>
+                  <div class="col-md-6">
+                    <h5 class="mb-1">{{ item.product.name }}</h5>
+                    <p class="mb-0 text-muted">
+                      ${{ formatPrice(item.product.price) }} each
+                    </p>
+                  </div>
+                  <div class="col-md-2 text-center">
+                    <p class="mb-0">Qty: {{ item.quantity }}</p>
+                  </div>
+                  <div class="col-md-2 text-end">
+                    <p class="fw-bold mb-0">
+                      ${{ formatPrice(item.product.price * item.quantity) }}
+                    </p>
+                  </div>
                 </div>
               </div>
-              
-              <div class="mb-3">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" v-model="form.email" required>
-              </div>
-              
-              <div class="mb-3">
-                <label for="phone" class="form-label">Phone</label>
-                <input type="tel" class="form-control" id="phone" v-model="form.phone" required>
-              </div>
-              
-              <div class="mb-4">
-                <label for="notes" class="form-label">Order Notes (Optional)</label>
-                <textarea class="form-control" id="notes" v-model="form.notes" rows="3"></textarea>
-              </div>
-              
-              <button type="submit" class="btn btn-primary" :disabled="loading">
-                Place Order
-              </button>
-              <router-link to="/cart" class="btn btn-outline-secondary ms-2">
-                Back to Cart
-              </router-link>
-            </form>
+            </div>
           </div>
         </div>
       </div>
       
-      <div class="col-md-4">
+      <div class="col-md-5">
         <div class="card">
           <div class="card-header bg-white">
             <h5 class="mb-0">Order Summary</h5>
           </div>
           <div class="card-body">
-            <div v-for="item in cartItems" :key="item.id" class="d-flex justify-content-between mb-2">
-              <span>{{ item.product.name }} × {{ item.quantity }}</span>
-              <span>${{ formatPrice(item.product.price * item.quantity) }}</span>
-            </div>
-            <hr>
             <div class="d-flex justify-content-between mb-2">
               <span>Subtotal:</span>
               <span>${{ formatPrice(subtotal) }}</span>
@@ -98,6 +70,30 @@
             <div class="d-flex justify-content-between mb-3">
               <strong>Total:</strong>
               <strong>${{ formatPrice(total) }}</strong>
+            </div>
+            
+            <div class="alert alert-info mb-4">
+              <p class="mb-0"><strong>Note:</strong> By confirming this order, you agree to the terms and conditions.</p>
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" 
+                      @click="placeOrder" 
+                      :disabled="loading || cartItems.length === 0">
+                <span v-if="loading">
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Processing...
+                </span>
+                <span v-else>
+                  <i class="fas fa-check-circle me-2"></i>
+                  Confirm Order
+                </span>
+              </button>
+              
+              <router-link to="/cart" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Cart
+              </router-link>
             </div>
           </div>
         </div>
@@ -122,20 +118,6 @@ export default {
     const error = ref(null)
     
     const cartItems = computed(() => store.state.cart.items)
-    
-    const form = ref({
-      firstName: '',
-      lastName: '',
-      address: '',
-      city: '',
-      state: '',
-      zip: '',
-      email: '',
-      phone: '',
-      notes: ''
-    })
-    
-    // Pre-fill form with user data if available
     const user = computed(() => store.state.auth.user)
     
     const subtotal = computed(() => {
@@ -160,7 +142,14 @@ export default {
     const placeOrder = async () => {
       try {
         loading.value = true
-        const result = await store.dispatch('cart/checkout')
+        error.value = null
+        
+        // Simple checkout data - no shipping info needed
+        const checkoutData = { 
+          userId: user.value?.id
+        }
+        
+        const result = await store.dispatch('cart/checkout', checkoutData)
         
         if (result.success) {
           router.push(`/order-success/${result.orderId}`)
@@ -169,7 +158,7 @@ export default {
         }
       } catch (err) {
         console.error('Checkout error:', err)
-        error.value = 'An error occurred while processing your order'
+        error.value = err.message || 'An error occurred while processing your order'
       } finally {
         loading.value = false
       }
@@ -178,19 +167,13 @@ export default {
     onMounted(() => {
       if (cartItems.value.length === 0) {
         router.push('/cart')
-      }
-      
-      // Pre-fill with user data if available
-      if (user.value) {
-        form.value.email = user.value.email
-        form.value.firstName = user.value.username
+        return
       }
     })
     
     return {
       loading,
       error,
-      form,
       cartItems,
       subtotal,
       shipping,

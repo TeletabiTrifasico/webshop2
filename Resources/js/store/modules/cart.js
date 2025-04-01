@@ -156,10 +156,13 @@ export default {
       }
     },
     
-    async checkout({ commit }, checkoutData) {
+    // Update the checkout method to handle the simplified process
+    async checkout({ commit }) {
       commit('setLoading', true)
+      commit('setError', null)
+      
       try {
-        const response = await axios.post('/api/cart/checkout', checkoutData)
+        const response = await axios.post('/api/cart/checkout')
         
         if (response.data.success) {
           commit('clearCart')
@@ -172,8 +175,29 @@ export default {
         }
       } catch (error) {
         console.error('Checkout error:', error)
-        commit('setError', 'Failed to complete checkout')
-        return { success: false, error: error.response?.data?.error || error.message }
+        
+        // Better error message extraction
+        let errorMessage = 'Failed to complete checkout'
+        
+        if (error.response) {
+          // The request was made and the server responded with an error status
+          if (error.response.data && error.response.data.error) {
+            errorMessage = error.response.data.error
+          } else if (error.response.data && error.response.data.message) {
+            errorMessage = error.response.data.message
+          } else {
+            errorMessage = `Server error: ${error.response.status}`
+          }
+        } else if (error.request) {
+          // The request was made but no response was received
+          errorMessage = 'No response from server. Please check your connection.'
+        } else {
+          // Something happened in setting up the request
+          errorMessage = error.message || 'Unknown error occurred'
+        }
+        
+        commit('setError', errorMessage)
+        return { success: false, error: errorMessage }
       } finally {
         commit('setLoading', false)
       }

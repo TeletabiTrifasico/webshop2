@@ -30,7 +30,7 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/order-success/:orderId',
+    path: '/order-success/:id',
     name: 'order-success',
     component: () => import('@/components/orders/Success.vue'),
     meta: { requiresAuth: true }

@@ -73,7 +73,7 @@ class Order extends Model {
 
     public function getWithDetails($orderId) {
         $stmt = $this->pdo->prepare("
-            SELECT o.*, u.username 
+            SELECT o.*, u.username, u.email 
             FROM {$this->table} o
             JOIN users u ON o.user_id = u.id
             WHERE o.id = ?
@@ -83,43 +83,31 @@ class Order extends Model {
     }
 
     public function create($data) {
-        $this->pdo->beginTransaction();
-        
         try {
-            // Calculate total amount from cart items
-            $totalAmount = 0;
-            foreach ($data['items'] as $item) {
-                $totalAmount += ($item['price'] * $item['quantity']);
-            }
-
-            // Create order record
+            // Start transaction to ensure atomicity
+            $this->pdo->beginTransaction();
+            
+            // Adjusted fields to match your database schema
             $stmt = $this->pdo->prepare("
                 INSERT INTO {$this->table} (user_id, total_amount, status, created_at)
-                VALUES (?, ?, 'pending', NOW())
+                VALUES (?, ?, ?, NOW())
             ");
             
-            $stmt->execute([$data['user_id'], $totalAmount]);
-            $orderId = $this->pdo->lastInsertId();
+            $stmt->execute([
+                $data['user_id'],
+                $data['total_amount'],
+                $data['status']
+            ]);
             
-            // Create order items
-            foreach ($data['items'] as $item) {
-                $stmt = $this->pdo->prepare("
-                    INSERT INTO order_items (order_id, product_id, quantity, price)
-                    VALUES (?, ?, ?, ?)
-                ");
-                
-                $stmt->execute([
-                    $orderId, 
-                    $item['product_id'], 
-                    $item['quantity'], 
-                    $item['price']
-                ]);
-            }
+            $orderId = $this->pdo->lastInsertId();
             
             $this->pdo->commit();
             return $orderId;
         } catch (\Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log("Order creation error: " . $e->getMessage());
             throw $e;
         }
     }
@@ -170,21 +158,24 @@ class Order extends Model {
     }
 
     public function delete($id) {
-        $this->pdo->beginTransaction();
-        
         try {
-            // First delete related order items
-            $stmt = $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
-            $stmt->execute([$id]);
+            $this->pdo->beginTransaction();
+            
+            // First delete associated order items
+            $itemStmt = $this->pdo->prepare("DELETE FROM order_items WHERE order_id = ?");
+            $itemStmt->execute([(int)$id]);
             
             // Then delete the order
-            $stmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE id = ?");
-            $stmt->execute([$id]);
+            $orderStmt = $this->pdo->prepare("DELETE FROM {$this->table} WHERE id = ?");
+            $orderStmt->execute([(int)$id]);
             
             $this->pdo->commit();
             return true;
         } catch (\Exception $e) {
-            $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log("Order deletion error: " . $e->getMessage());
             return false;
         }
     }

@@ -264,31 +264,21 @@ class CartController extends BaseApiController {
                 return;
             }
             
-            // Get request data for shipping info
-            $data = $this->getRequestData();
+            // Calculate total amount (verify server side)
+            $totalAmount = $this->cartModel->getTotal($userId);
             
-            // Create transaction
+            // Create order
             $orderModel = $this->model('Order');
             $orderItemModel = $this->model('OrderItem');
             
-            // Create order
+            // Create order with simplified data to match your schema
             $orderData = [
                 'user_id' => $userId,
                 'status' => 'pending',
-                'total_amount' => $this->cartModel->getTotal($userId),
-                'shipping_address' => json_encode([
-                    'firstName' => $data['firstName'] ?? '',
-                    'lastName' => $data['lastName'] ?? '',
-                    'address' => $data['address'] ?? '',
-                    'city' => $data['city'] ?? '',
-                    'state' => $data['state'] ?? '',
-                    'zip' => $data['zip'] ?? '',
-                    'email' => $data['email'] ?? '',
-                    'phone' => $data['phone'] ?? ''
-                ]),
-                'notes' => $data['notes'] ?? ''
+                'total_amount' => $totalAmount
             ];
             
+            // Create order
             $orderId = $orderModel->create($orderData);
             
             if (!$orderId) {
@@ -314,6 +304,8 @@ class CartController extends BaseApiController {
                 'order_id' => $orderId
             ]);
         } catch (\Exception $e) {
+            error_log("Checkout error: " . $e->getMessage());
+            error_log("Checkout error trace: " . $e->getTraceAsString());
             $this->handleException($e, 'Failed to complete checkout');
         }
     }

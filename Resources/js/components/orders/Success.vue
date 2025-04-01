@@ -27,14 +27,23 @@
 
 <script>
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { onMounted } from 'vue'
 
 export default {
   name: 'OrderSuccess',
   
   setup() {
     const route = useRoute()
-    const orderId = ref(route.params.orderId)
+    const router = useRouter()
+    
+    const orderId = ref(route.params.id)
+    
+    onMounted(() => {
+      if (!orderId.value) {
+        router.push('/')
+      }
+    })
     
     return {
       orderId

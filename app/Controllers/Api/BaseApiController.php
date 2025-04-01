@@ -98,7 +98,10 @@ class BaseApiController {
      * @param string $message The user-friendly error message
      */
     protected function handleException(\Exception $e, $message = 'An error occurred') {
-        error_log($message . ": " . $e->getMessage());
+        // Log the full error details for debugging
+        error_log("=== ERROR DETAILS ===");
+        error_log("{$message}: " . $e->getMessage());
+        error_log("File: " . $e->getFile() . " on line " . $e->getLine());
         error_log("Stack trace: " . $e->getTraceAsString());
         
         $errorData = [
@@ -112,7 +115,7 @@ class BaseApiController {
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+                'trace' => explode("\n", $e->getTraceAsString())
             ];
         }
         
