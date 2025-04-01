@@ -5,22 +5,30 @@ export default {
 
     state: {
         user: JSON.parse(localStorage.getItem('user')) || null,
+        token: localStorage.getItem('token') || null,
         loading: false,
         error: null
     },
 
     mutations: {
-        setUser(state, user) {
+        setAuth(state, { user, token }) {
             state.user = user
-            if (user) {
+            state.token = token
+            
+            // Store in localStorage for persistence
+            if (user && token) {
                 localStorage.setItem('user', JSON.stringify(user))
+                localStorage.setItem('token', token)
             } else {
                 localStorage.removeItem('user')
+                localStorage.removeItem('token')
             }
         },
+        
         setLoading(state, loading) {
             state.loading = loading
         },
+        
         setError(state, error) {
             state.error = error
         }
@@ -39,7 +47,15 @@ export default {
                 })
                 
                 if (response.data.success) {
-                    commit('setUser', response.data.user)
+                    // Save user and token
+                    commit('setAuth', {
+                        user: response.data.user,
+                        token: response.data.token
+                    })
+                    
+                    // Set Authorization header for future requests
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
+                    
                     return { success: true }
                 }
                 
@@ -61,7 +77,15 @@ export default {
                 const response = await axios.post('/api/auth/login', credentials)
                 
                 if (response.data.success) {
-                    commit('setUser', response.data.user)
+                    // Save user and token
+                    commit('setAuth', {
+                        user: response.data.user,
+                        token: response.data.token
+                    })
+                    
+                    // Set Authorization header for future requests
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`
+                    
                     return { success: true }
                 }
                 
@@ -78,12 +102,30 @@ export default {
         async logout({ commit }) {
             try {
                 await axios.post('/api/auth/logout')
-                commit('setUser', null)
-                return { success: true }
             } catch (error) {
                 console.error('Logout error:', error)
-                return { success: false, error: error.message }
+            } finally {
+                // Always clear auth state
+                commit('setAuth', { user: null, token: null })
+                
+                // Remove Authorization header
+                delete axios.defaults.headers.common['Authorization']
+            }
+            
+            return { success: true }
+        },
+        
+        // Initialize auth from localStorage
+        initAuth({ commit, state }) {
+            if (state.token) {
+                axios.defaults.headers.common['Authorization'] = `Bearer ${state.token}`
             }
         }
+    },
+    
+    getters: {
+        isAuthenticated: state => !!state.token,
+        isAdmin: state => state.user && state.user.role === 'admin',
+        user: state => state.user
     }
 }

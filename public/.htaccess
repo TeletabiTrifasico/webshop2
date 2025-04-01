@@ -5,29 +5,27 @@
     RewriteCond %{REQUEST_URI} ^/api/
     RewriteRule ^ index.php [L]
 
-    # Correctly serve JavaScript module files with proper MIME type
+    # Handle frontend assets with proper MIME types
     <FilesMatch "\.js$">
-        Header set Content-Type "application/javascript"
+        ForceType application/javascript
     </FilesMatch>
     
-    # Correctly serve CSS files
-    <FilesMatch "\.css$">
-        Header set Content-Type "text/css"
-    </FilesMatch>
-    
-    # Handle asset files directly if they exist
+    # Handle direct asset requests
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule \.(js|css|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$ - [L]
 
-    # Send all other requests to index.html for SPA routing
+    # Send all non-file/non-directory requests to index.html for SPA routing
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.html [L]
 </IfModule>
 
-# Set correct MIME types for JavaScript modules
-AddType application/javascript .js
-AddType text/css .css
+# Set proper MIME types
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType application/javascript .mjs
+    AddType text/css .css
+</IfModule>
 
 # Set security headers
 <IfModule mod_headers.c>

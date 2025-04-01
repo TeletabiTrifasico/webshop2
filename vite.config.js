@@ -17,7 +17,8 @@ export default defineConfig({
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: 'js/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash][extname]'
+        assetFileNames: 'assets/[name].[hash][extname]',
+        format: 'iife', // IIFE format for better browser compatibility
       }
     }
   },

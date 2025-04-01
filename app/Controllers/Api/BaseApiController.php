@@ -2,60 +2,120 @@
 
 namespace App\Controllers\Api;
 
-use App\Controllers\Controller;
+use App\Utils\JWT;
+use App\Middleware\JwtMiddleware;
 
-class BaseApiController extends Controller {
+class BaseApiController {
+    public function __construct() {
+        // Initialize JWT with secret if defined
+        if (defined('JWT_SECRET')) {
+            JWT::init(JWT_SECRET);
+        }
+    }
+    
+    protected function model($model) {
+        $modelClass = "\\App\\Models\\{$model}";
+        return new $modelClass();
+    }
+    
     protected function jsonResponse($data, $statusCode = 200) {
         http_response_code($statusCode);
         header('Content-Type: application/json');
         echo json_encode($data);
-        exit;
     }
     
     protected function getRequestData() {
-        $method = $_SERVER['REQUEST_METHOD'];
+        $json = file_get_contents('php://input');
+        $data = json_decode($json, true);
         
-        // For PUT requests, get data from php://input
-        if ($method === 'PUT') {
-            // Check if Content-Type contains multipart/form-data
-            if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
-                // Handle multipart form data for PUT
-                parse_str(file_get_contents('php://input'), $_PUT);
-                
-                // Merge with $_FILES for uploaded files
-                $data = $_PUT;
-                // Files are already in $_FILES
-            } else {
-                // Regular JSON data
-                $input = file_get_contents('php://input');
-                $data = json_decode($input, true) ?? [];
-            }
-        } 
-        // For POST requests, check if it's multipart/form-data
-        else if ($method === 'POST') {
-            if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false) {
-                // For multipart/form-data, data is in $_POST
-                $data = $_POST;
-                // Files are in $_FILES
-            } else if (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false) {
-                // For JSON data
-                $input = file_get_contents('php://input');
-                $data = json_decode($input, true) ?? [];
-            } else {
-                // Default to $_POST
-                $data = $_POST;
-            }
-        } else {
-            // For other methods
-            $input = file_get_contents('php://input');
-            $data = json_decode($input, true) ?? [];
+        // If JSON parsing failed, fallback to POST data
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $data = $_POST;
         }
         
-        return $data;
+        return $data ?? [];
     }
     
-    protected function model($model) {
-        $model = "\\App\\Models\\$model";
-        return new $model();
+    /**
+     * Check if the user is authenticated via JWT
+     */
+    protected function isAuthenticated() {
+        return JwtMiddleware::getAuthUser() !== false;
+    }
+    
+    /**
+     * Check if the authenticated user is an admin
+     */
+    protected function isAdmin() {
+        return JwtMiddleware::isAdmin();
+    }
+    
+    /**
+     * Get the authenticated user data
+     */
+    protected function getAuthUser() {
+        return JwtMiddleware::getAuthUser();
+    }
+    
+    /**
+     * Require authentication for a route
+     */
+    protected function requireAuth() {
+        if (!$this->isAuthenticated()) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Authentication required'
+            ], 401);
+            exit;
+        }
+    }
+    
+    /**
+     * Require admin role for a route
+     */
+    protected function requireAdmin() {
+        if (!$this->isAuthenticated()) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Authentication required'
+            ], 401);
+            exit;
+        }
+        
+        if (!$this->isAdmin()) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Admin privileges required'
+            ], 403);
+            exit;
+        }
+    }
+    
+    /**
+     * Handle exceptions in a consistent way
+     * 
+     * @param \Exception $e The exception to handle
+     * @param string $message The user-friendly error message
+     */
+    protected function handleException(\Exception $e, $message = 'An error occurred') {
+        error_log($message . ": " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        
+        $errorData = [
+            'success' => false,
+            'error' => $message
+        ];
+        
+        // Add debug information in development environment
+        if (defined('APP_ENV') && APP_ENV === 'development') {
+            $errorData['debug'] = [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ];
+        }
+        
+        $this->jsonResponse($errorData, 500);
     }
 }

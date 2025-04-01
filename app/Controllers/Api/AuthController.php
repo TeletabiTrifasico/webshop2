@@ -2,107 +2,173 @@
 
 namespace App\Controllers\Api;
 
+use App\Utils\JWT;
+
 class AuthController extends BaseApiController {
     private $userModel;
-
+    
     public function __construct() {
         parent::__construct();
         $this->userModel = $this->model('User');
+        
+        // Initialize JWT with secret
+        JWT::init(JWT_SECRET);
     }
-
-    public function login() {
-        try {
-            $data = $this->getRequestData();
-            
-            if (!isset($data['email']) || !isset($data['password'])) {
-                throw new \Exception('Email and password are required');
-            }
-
-            $user = $this->userModel->findByEmail($data['email']);
-            
-            if (!$user || !password_verify($data['password'], $user['password'])) {
-                throw new \Exception('Invalid credentials');
-            }
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = $user['role'];
-            
-            unset($user['password']);
-            
-            $this->jsonResponse([
-                'success' => true,
-                'user' => $user
-            ]);
-        } catch (\Exception $e) {
-            $this->jsonResponse([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 400);
-        }
-    }
-
+    
     public function register() {
-        try {
-            $data = $this->getRequestData();
-            
-            // Validate required fields
-            if (empty($data['username']) || empty($data['email']) || empty($data['password'])) {
-                throw new \Exception('All fields are required');
-            }
-
-            // Validate email format
-            if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                throw new \Exception('Invalid email format');
-            }
-
-            // Check if email exists
-            if ($this->userModel->findByEmail($data['email'])) {
-                throw new \Exception('Email already registered');
-            }
-
-            // Create user
-            $userId = $this->userModel->create([
-                'username' => trim($data['username']),
-                'email' => strtolower(trim($data['email'])),
-                'password' => password_hash($data['password'], PASSWORD_DEFAULT),
-                'role' => 'user'
-            ]);
-
-            if (!$userId) {
-                throw new \Exception('Failed to create account');
-            }
-
-            $user = $this->userModel->findById($userId);
-            if (!$user) {
-                throw new \Exception('Error retrieving user account');
-            }
-
-            // Start session
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
-            }
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = $user['role'];
-
-            // Remove sensitive data
-            unset($user['password']);
-
-            $this->jsonResponse([
-                'success' => true,
-                'user' => $user
-            ]);
-        } catch (\Exception $e) {
-            error_log('Registration error: ' . $e->getMessage());
+        $data = $this->getRequestData();
+        
+        // Validation
+        if (empty($data['username']) || empty($data['email']) || empty($data['password'])) {
             $this->jsonResponse([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Username, email, and password are required'
             ], 400);
+            return;
+        }
+        
+        // Validate email
+        if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Invalid email format'
+            ], 400);
+            return;
+        }
+        
+        // Check if email already exists
+        if ($this->userModel->findByEmail($data['email'])) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Email already registered'
+            ], 400);
+            return;
+        }
+        
+        // Create user
+        $userData = [
+            'username' => trim($data['username']),
+            'email' => strtolower(trim($data['email'])),
+            'password' => password_hash($data['password'], PASSWORD_DEFAULT),
+            'role' => 'user' // Default role
+        ];
+        
+        $userId = $this->userModel->create($userData);
+        
+        if ($userId) {
+            $user = $this->userModel->findById($userId);
+            
+            // Create payload for JWT
+            $payload = [
+                'user_id' => $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'role' => $user['role']
+            ];
+            
+            // Generate JWT token
+            $token = JWT::generate($payload, JWT_EXPIRY);
+            
+            // Don't send password back
+            unset($user['password']);
+            
+            $this->jsonResponse([
+                'success' => true,
+                'message' => 'Registration successful',
+                'token' => $token,
+                'user' => $user
+            ]);
+        } else {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Failed to create account'
+            ], 500);
         }
     }
-
+    
+    public function login() {
+        $data = $this->getRequestData();
+        
+        // Validation
+        if (empty($data['email']) || empty($data['password'])) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Email and password are required'
+            ], 400);
+            return;
+        }
+        
+        // Find user
+        $user = $this->userModel->findByEmail($data['email']);
+        
+        if (!$user) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Invalid credentials'
+            ], 401);
+            return;
+        }
+        
+        // Verify password
+        if (password_verify($data['password'], $user['password'])) {
+            // Create payload for JWT
+            $payload = [
+                'user_id' => $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'role' => $user['role']
+            ];
+            
+            // Generate JWT token
+            $token = JWT::generate($payload, JWT_EXPIRY);
+            
+            // Don't send password back
+            unset($user['password']);
+            
+            $this->jsonResponse([
+                'success' => true,
+                'message' => 'Login successful',
+                'token' => $token,
+                'user' => $user
+            ]);
+        } else {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Invalid credentials'
+            ], 401);
+        }
+    }
+    
     public function logout() {
-        session_destroy();
-        $this->jsonResponse(['success' => true]);
+        // JWT is stateless, so no server-side logout needed
+        // Client will handle removing the token
+        
+        $this->jsonResponse([
+            'success' => true,
+            'message' => 'Logout successful'
+        ]);
+    }
+    
+    public function getCurrentUser() {
+        // Use middleware to verify token
+        $userData = \App\Middleware\JwtMiddleware::getAuthUser();
+        
+        if (!$userData) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Unauthorized'
+            ], 401);
+            return;
+        }
+        
+        $this->jsonResponse([
+            'success' => true,
+            'user' => [
+                'id' => $userData['user_id'],
+                'username' => $userData['username'],
+                'email' => $userData['email'],
+                'role' => $userData['role']
+            ]
+        ]);
     }
 }

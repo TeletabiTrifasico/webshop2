@@ -16,29 +16,38 @@ class AdminController extends BaseApiController {
         $this->orderItemModel = $this->model('OrderItem');
     }
 
-    // Check if the user is admin
-    private function checkAdmin() {
-        if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+    // Get dashboard stats
+    public function getDashboardStats() {
+        parent::requireAdmin();
+        
+        try {
+            $totalUsers = $this->userModel->getTotal();
+            $totalOrders = $this->orderModel->getTotal();
+            $revenue = $this->orderModel->getTotalRevenue();
+            $totalProducts = $this->productModel->getTotal();
+            
             $this->jsonResponse([
-                'success' => false,
-                'error' => 'Unauthorized access'
-            ], 403);
-            exit;
+                'success' => true,
+                'stats' => [
+                    'totalUsers' => $totalUsers,
+                    'totalOrders' => $totalOrders,
+                    'revenue' => $revenue,
+                    'totalProducts' => $totalProducts
+                ]
+            ]);
+        } catch (\Exception $e) {
+            $this->handleException($e, 'Failed to fetch dashboard stats');
         }
     }
 
     // Get all users
     public function getUsers() {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         // Get pagination parameters
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+        $limit = isset($_GET['limit']) ? min(100, max(1, (int)$_GET['limit'])) : 10;
         $search = isset($_GET['search']) ? $_GET['search'] : '';
-        
-        // Validate page and limit
-        if ($page < 1) $page = 1;
-        if ($limit < 1 || $limit > 100) $limit = 10;
         
         // Get paginated users
         $users = $this->userModel->getAll($page, $limit, $search);
@@ -67,7 +76,7 @@ class AdminController extends BaseApiController {
 
     // Update user role
     public function updateUserRole($userId) {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         $data = $this->getRequestData();
         
@@ -79,8 +88,9 @@ class AdminController extends BaseApiController {
             return;
         }
         
-        // Don't allow changing own role
-        if ($userId == $_SESSION['user_id']) {
+        // Check if user is trying to change their own role
+        $authUser = $this->getAuthUser();
+        if ($userId == $authUser['user_id']) {
             $this->jsonResponse([
                 'success' => false,
                 'error' => 'Cannot change your own role'
@@ -105,10 +115,11 @@ class AdminController extends BaseApiController {
     
     // Delete user
     public function deleteUser($userId) {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         // Don't allow deleting own account
-        if ($userId == $_SESSION['user_id']) {
+        $authUser = $this->getAuthUser();
+        if ($userId == $authUser['user_id']) {
             $this->jsonResponse([
                 'success' => false,
                 'error' => 'Cannot delete your own account'
@@ -133,7 +144,7 @@ class AdminController extends BaseApiController {
 
     // Get all orders
     public function getOrders() {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         // Get pagination parameters
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -166,7 +177,7 @@ class AdminController extends BaseApiController {
     
     // Get order details
     public function getOrderDetails($orderId) {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         $order = $this->orderModel->getWithDetails($orderId);
         
@@ -189,7 +200,7 @@ class AdminController extends BaseApiController {
     
     // Update order status
     public function updateOrderStatus($orderId) {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         $data = $this->getRequestData();
         
@@ -218,7 +229,7 @@ class AdminController extends BaseApiController {
     
     // Delete order
     public function deleteOrder($orderId) {
-        $this->checkAdmin();
+        parent::requireAdmin();
         
         $result = $this->orderModel->delete($orderId);
         

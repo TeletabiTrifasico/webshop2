@@ -16,4 +16,19 @@ define('SESSION_TIMEOUT', 3600);
 
 // API settings for Docker
 define('API_URL', 'http://localhost:8088/api');
+
+// JWT settings
+define('JWT_SECRET', 'cGC9EdNfxMLwDQ3PjHmS4TKvRbF8aZtY'); // Use a strong random key in production
+define('JWT_EXPIRY', 24 * 3600); // 24 hours in seconds
+
+// URL root
+define('URL_ROOT', '/');
+
+// Site name
+define('SITE_NAME', 'WebShop');
+
+// Image upload settings
+define('UPLOAD_DIR', 'uploads/');
+define('MAX_IMAGE_SIZE', 5 * 1024 * 1024); // 5MB
+define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif']);
 ?>

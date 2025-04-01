@@ -12,7 +12,7 @@ class ProductController extends BaseApiController {
 
     public function index() {
         try {
-            // Get pagination parameters with explicit defaults and type casting
+            // Get pagination parameters
             $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
             $limit = isset($_GET['limit']) ? min(100, max(1, (int)$_GET['limit'])) : 10;
             $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -47,7 +47,8 @@ class ProductController extends BaseApiController {
             error_log("Products index error: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
             
-            $this->handleException($e, 'Failed to fetch products');
+            // Use the parent class's handleException method
+            parent::handleException($e, 'Failed to fetch products');
         }
     }
 
@@ -67,7 +68,7 @@ class ProductController extends BaseApiController {
                 'product' => $product
             ]);
         } catch (\Exception $e) {
-            $this->handleException($e, 'Failed to fetch product details');
+            parent::handleException($e, 'Failed to fetch product details');
         }
     }
 
@@ -82,7 +83,7 @@ class ProductController extends BaseApiController {
                 'products' => $products
             ]);
         } catch (\Exception $e) {
-            $this->handleException($e, 'Failed to fetch latest products');
+            parent::handleException($e, 'Failed to fetch latest products');
         }
     }
 
@@ -91,15 +92,162 @@ class ProductController extends BaseApiController {
         $this->jsonResponse(['products' => $products]);
     }
 
-    private function handleException(\Exception $e, $defaultMessage) {
-        error_log($defaultMessage . ": " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
+    // Admin methods for product management
+    public function create() {
+        parent::requireAdmin();
         
-        $this->jsonResponse([
-            'success' => false,
-            'error' => $defaultMessage,
-            'message' => $e->getMessage(),
-            'trace' => APP_ENV === 'development' ? $e->getTraceAsString() : null
-        ], 500);
+        $data = $this->getRequestData();
+        
+        // Basic validation
+        if (empty($data['name']) || empty($data['price'])) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Name and price are required'
+            ], 400);
+            return;
+        }
+        
+        try {
+            // Handle image upload if provided
+            $imagePath = null;
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $imagePath = $this->handleImageUpload($_FILES['image']);
+                if (!$imagePath) {
+                    throw new \Exception('Failed to upload image');
+                }
+                $data['image'] = $imagePath;
+            }
+            
+            // Create product
+            $productId = $this->productModel->create($data);
+            
+            if ($productId) {
+                $product = $this->productModel->findById($productId);
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => 'Product created successfully',
+                    'product' => $product
+                ]);
+            } else {
+                throw new \Exception('Failed to create product');
+            }
+        } catch (\Exception $e) {
+            parent::handleException($e, 'Failed to create product');
+        }
+    }
+    
+    public function update($id) {
+        parent::requireAdmin();
+        
+        $product = $this->productModel->findById($id);
+        if (!$product) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Product not found'
+            ], 404);
+            return;
+        }
+        
+        $data = $this->getRequestData();
+        
+        // Basic validation
+        if (empty($data['name']) || empty($data['price'])) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Name and price are required'
+            ], 400);
+            return;
+        }
+        
+        try {
+            // Handle image upload if provided
+            if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                $imagePath = $this->handleImageUpload($_FILES['image']);
+                if (!$imagePath) {
+                    throw new \Exception('Failed to upload image');
+                }
+                $data['image'] = $imagePath;
+                
+                // Delete old image if there was one
+                if ($product['image'] && $product['image'] !== 'default.jpg') {
+                    $oldImagePath = __DIR__ . '/../../public/uploads/' . $product['image'];
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+            }
+            
+            // Update product
+            $result = $this->productModel->update($id, $data);
+            
+            if ($result) {
+                $updatedProduct = $this->productModel->findById($id);
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => 'Product updated successfully',
+                    'product' => $updatedProduct
+                ]);
+            } else {
+                throw new \Exception('Failed to update product');
+            }
+        } catch (\Exception $e) {
+            parent::handleException($e, 'Failed to update product');
+        }
+    }
+    
+    public function delete($id) {
+        parent::requireAdmin();
+        
+        $product = $this->productModel->findById($id);
+        if (!$product) {
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Product not found'
+            ], 404);
+            return;
+        }
+        
+        try {
+            // Delete product image if it's not the default one
+            if ($product['image'] && $product['image'] !== 'default.jpg') {
+                $imagePath = __DIR__ . '/../../public/uploads/' . $product['image'];
+                if (file_exists($imagePath)) {
+                    unlink($imagePath);
+                }
+            }
+            
+            $result = $this->productModel->delete($id);
+            
+            if ($result) {
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => 'Product deleted successfully'
+                ]);
+            } else {
+                throw new \Exception('Failed to delete product');
+            }
+        } catch (\Exception $e) {
+            parent::handleException($e, 'Failed to delete product');
+        }
+    }
+    
+    // Helper method for image upload
+    private function handleImageUpload($file) {
+        $uploadDir = __DIR__ . '/../../public/uploads/';
+        
+        // Create directory if it doesn't exist
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+        
+        // Generate unique filename
+        $filename = md5(uniqid() . time()) . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
+        $targetFile = $uploadDir . $filename;
+        
+        if (move_uploaded_file($file['tmp_name'], $targetFile)) {
+            return $filename;
+        }
+        
+        return null;
     }
 }
