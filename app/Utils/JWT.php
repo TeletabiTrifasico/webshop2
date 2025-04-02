@@ -2,6 +2,18 @@
 
 namespace App\Utils;
 
+// Fallback include to ensure dependencies are loaded
+if (!function_exists('random_bytes')) {
+    // PHP 7+ should have random_bytes, but just in case
+    function random_bytes($length) {
+        $bytes = '';
+        for ($i = 0; $i < $length; $i++) {
+            $bytes .= chr(mt_rand(0, 255));
+        }
+        return $bytes;
+    }
+}
+
 class JWT {
     private static $secret;
     
@@ -102,21 +114,26 @@ class JWT {
     /**
      * Constant-time string comparison to prevent timing attacks
      */
-    private static function constantTimeCompare($knownString, $userString) {
-        if (function_exists('hash_equals')) {
-            return hash_equals($knownString, $userString);
-        }
-        
-        // Fallback implementation
-        if (strlen($knownString) !== strlen($userString)) {
+    private static function constantTimeCompare($a, $b) {
+        if (strlen($a) !== strlen($b)) {
             return false;
         }
         
         $result = 0;
-        for ($i = 0; $i < strlen($knownString); $i++) {
-            $result |= ord($knownString[$i]) ^ ord($userString[$i]);
+        for ($i = 0; $i < strlen($a); $i++) {
+            $result |= ord($a[$i]) ^ ord($b[$i]);
         }
         
         return $result === 0;
+    }
+
+    /**
+     * Alias for verify() - added for compatibility
+     * 
+     * @param string $token The JWT token
+     * @return array|false Decoded payload or false if invalid
+     */
+    public static function validate($token) {
+        return self::verify($token);
     }
 }

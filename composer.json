@@ -1,0 +1,28 @@
+{
+    "name": "hugo/webshop",
+    "description": "Modern e-commerce platform built with PHP 8 and Vue 3",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Hugo Jimenez Barrasa",
+            "email": "your.email@example.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

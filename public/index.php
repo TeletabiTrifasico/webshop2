@@ -1,6 +1,11 @@
 <?php
+// Load configurations first
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
+
+// Add explicit include for JWT class
+require_once __DIR__ . '/../app/Utils/JWT.php';
+require_once __DIR__ . '/../app/Middleware/JwtMiddleware.php';
 
 // Enable CORS
 header('Access-Control-Allow-Origin: *');
@@ -78,14 +83,20 @@ set_error_handler('apiErrorHandler', E_ALL);
 spl_autoload_register(function ($class) {
     $class = str_replace('\\', DIRECTORY_SEPARATOR, $class);
     $file = __DIR__ . '/../' . $class . '.php';
+    
     if (file_exists($file)) {
-        require $file;
+        require_once $file;
+    } else {
+        error_log("Autoload failed for class: $class (File not found: $file)");
     }
 });
 
-// Initialize JWT
-if (defined('JWT_SECRET')) {
+// Make sure the JWT class exists before initializing
+if (class_exists('\\App\\Utils\\JWT')) {
+    // Initialize JWT with the defined constant
     \App\Utils\JWT::init(JWT_SECRET);
+} else {
+    error_log("Critical error: JWT class not found. Check autoloading.");
 }
 
 session_start();

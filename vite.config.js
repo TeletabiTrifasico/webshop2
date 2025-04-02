@@ -26,5 +26,13 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './Resources/js')
     }
+  },
+  define: {
+    'process.env': {}
+  },
+  server: {
+    hmr: {
+      overlay: false
+    }
   }
 })
