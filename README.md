@@ -1,288 +1,112 @@
 # Webshop Project
 
 ## Project Overview
-A modern e-commerce application built with PHP, featuring a responsive design and real-time cart functionality. This webshop allows users to browse products, manage their shopping cart, and complete purchases.
+A modern e-commerce application built with PHP and Vue.js, featuring responsive design and real-time cart functionality. This webshop allows users to browse products, manage their shopping cart, and complete purchases.
 
-## Features
-- User authentication (login and registration)
-- Product browsing and detailed view
+## Instructions for Teacher
+### How to Download and Run This Project
+
+1. **Clone or download the repository**:
+   ```bash
+   git clone https://github.com/TeletabiTrifasico/webshop2
+   # OR download the ZIP file and extract it
+   ```
+
+2. **Make sure Docker Desktop is installed and running** on your system
+   - Download from: https://www.docker.com/products/docker-desktop/
+
+3. **Navigate to the project directory**:
+   ```bash
+   cd webshop
+   ```
+
+4. **Build and start the Docker containers**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+5. **Access the application**:
+   - Website: http://localhost:8088
+   - Admin panel: http://localhost:8088/admin
+   - Database: localhost:3307 (if you need direct access)
+
+6. **Default Login Credentials**:
+   - Admin User:
+     - Email: admin@webshop.com
+     - Password: password
+   - Sample User:
+     - Email: john@example.com
+     - Password: password
+
+7. **To stop the containers when finished**:
+   ```bash
+   docker-compose down
+   ```
+
+### Testing the Application Features
+
+1. **As a Customer**:
+   - Browse products on the homepage
+   - Add items to cart (test real-time updates)
+   - Checkout process (create an account first)
+   - View order history
+
+2. **As an Admin** (login with admin@webshop.com):
+   - Add/edit/delete products (image upload supports JPG format only)
+   - Manage users
+   - View and update orders
+
+## Features Implemented
+- User authentication (login/registration)
+- Product browsing with detailed view
 - Real-time shopping cart management
-- Responsive design for all devices
-- Dynamic cart updates without page refresh
-- Secure user sessions
-- Profile management system
-- Admin dashboard with order management
-- Toast notifications for user feedback
-- Order status tracking
-- Image upload for products
+- Checkout process with order confirmation
+- Admin dashboard for product, user, and order management
+- Responsive design (works on mobile/tablet/desktop)
+- Image uploads for products (JPG only)
 - Role-based access control (admin/user)
 
 ## Technologies Used
-- PHP 8.0+
-- MySQL
-- JavaScript (ES6)
-- Bootstrap 5
-- HTML5 & CSS3
-
-## Directory Structure
-```
-webshop/
-├── app/
-│   ├── Controllers/
-│   │   ├── AdminController.php
-│   │   ├── ApiController.php
-│   │   ├── AuthController.php
-│   │   ├── CartController.php
-│   │   ├── Controller.php
-│   │   ├── HomeController.php
-│   │   ├── ProductController.php
-│   │   └── UserController.php
-│   ├── Models/
-│   │   ├── Model.php
-│   │   ├── User.php
-│   │   ├── Product.php
-│   │   └── Order.php
-│   └── views/
-│       ├── layouts/
-│       ├── admin/
-│       ├── auth/
-│       ├── cart/
-│       ├── home/
-│       ├── products/
-│       └── user/
-├── config/
-│   ├── config.php
-│   └── database.php
-└── public/
-    ├── css/
-    ├── js/
-    ├── images/
-    │   └── products/
-    └── index.php
-```
-
-## Docker Installation for Quick Setup
-
-### Prerequisites
-- Docker Desktop installed on your system
-- Git (optional, if you want to clone the repository)
-
-### Steps to Run the Project
-1. Download or clone this repository
-2. Open a terminal/command prompt and navigate to the project folder
-3. Run the following command to start the containers:
-   ```bash
-   docker-compose up -d
-   ```
-4. Wait for the containers to build and start (this might take a few minutes the first time)
-5. Access the application at: http://localhost:8088
-
-### Default Login Credentials
-- Admin User:
-  - Email: admin@webshop.com
-  - Password: password
-- Sample User:
-  - Email: john@example.com
-  - Password: password
-
-### To Stop the Project
-```bash
-docker-compose down
-```
-
-### Troubleshooting
-If you encounter any issues:
-1. Check Docker logs: `docker-compose logs`
-2. Ensure ports 8088 and 3307 are not in use
-3. Try rebuilding containers: `docker-compose up -d --build`
-4. Clear all Docker data: `docker system prune -a --volumes` (use with caution)
-
-## Docker Installation
-1. Install Docker Desktop for Windows from [Docker's official website](https://www.docker.com/products/docker-desktop/)
-
-2. Clone the repository:
-```bash
-git clone https://github.com/TeletabiTrifasico/webshop
-cd webshop
-```
-
-3. Build and start the Docker containers:
-```bash
-docker-compose up -d --build
-```
-
-4. The application will be available at:
-- Website: http://localhost:8088
-- Database: localhost:3307
-  - Username: webshopadmin
-  - Password: !webshopadmin2025
-  - Database: webshop_db
-
-### Docker Commands
-- Start containers: `docker-compose up -d`
-- Stop containers: `docker-compose down`
-- View logs: `docker-compose logs`
-- Rebuild containers: `docker-compose up -d --build`
-- Remove all containers and volumes: `docker-compose down -v`
-
-### Default Users
-- Admin User:
-  - Email: admin@webshop.com
-  - Password: password
-- Sample User:
-  - Email: john@example.com
-  - Password: password
-
-### Docker Container Details
-- Web Server: Apache 2.4 with PHP 8.0
+- Backend: PHP 8.0+
+- Frontend: Vue.js, Bootstrap 5
 - Database: MySQL 8.0
-- Ports:
-  - Web: 8088 (http://localhost:8088)
-  - MySQL: 3307 (localhost:3307)
-
-### Troubleshooting
-If you encounter any issues:
-1. Check Docker logs: `docker-compose logs`
-2. Ensure ports 8088 and 3307 are not in use
-3. Try rebuilding containers: `docker-compose up -d --build`
-4. Clear all Docker data: `docker system prune -a --volumes`
-
-## Database Setup
-Execute the following SQL script to set up and populate the database:
-
-```sql
-CREATE DATABASE IF NOT EXISTS webshop_db;
-USE webshop_db;
-
--- Create tables
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('user', 'admin') DEFAULT 'user',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE products (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL,
-    image VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE orders (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    total_amount DECIMAL(10,2) NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE order_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
-);
-
--- Insert sample users (password: 'password' for all users)
-INSERT INTO users (username, email, password, role) VALUES
-('john_doe', 'john@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'user'),
-('jane_smith', 'jane@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'user'),
-('admin', 'admin@webshop.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
-
--- Insert sample products
-INSERT INTO products (name, description, price, image) VALUES
-('Classic Watch', 'A beautiful classic analog watch with leather strap', 199.99, '/images/watch1.jpg'),
-('Smart Watch', 'Modern smartwatch with health tracking features', 299.99, '/images/watch2.jpg'),
-('Gold Ring', '18K gold ring with diamond', 999.99, '/images/ring1.jpg'),
-('Silver Necklace', 'Sterling silver necklace with pendant', 149.99, '/images/necklace1.jpg'),
-('PlayStation 5', 'Latest gaming console from Sony', 499.99, '/images/ps5.jpg'),
-('Xbox Series X', 'Microsoft''s powerful gaming console', 499.99, '/images/xbox.jpg'),
-('Nintendo Switch', 'Portable gaming console', 299.99, '/images/switch.jpg'),
-('Vintage Clock', 'Antique wall clock from 1950s', 399.99, '/images/clock1.jpg');
-
--- Insert sample orders
-INSERT INTO orders (user_id, total_amount, status) VALUES
-(1, 699.98, 'completed'),
-(2, 499.99, 'pending'),
-(1, 299.99, 'processing');
-
--- Insert sample order items
-INSERT INTO order_items (order_id, product_id, quantity, price) VALUES
-(1, 1, 1, 199.99),
-(1, 2, 1, 499.99),
-(2, 5, 1, 499.99),
-(3, 7, 1, 299.99);
-```
-
-Note: The default password for all sample users is 'password'
-
-## Usage
-### Customer Features
-- Browse products on the homepage
-- Register an account or login
-- Add products to cart with real-time updates
-- View and modify cart contents
-- Complete purchase through checkout
-- Manage profile information
-- View order history
-
-### Admin Features
-- Manage products (add/edit/delete)
-- Manage users (add/edit/delete)
-- View and manage orders
-- Update order statuses
-- View dashboard statistics
-- Monitor recent orders and users
+- Environment: Docker containerized setup
+- Authentication: JWT token-based authentication
 
 ## API Endpoints
-The application provides JSON API endpoints for accessing data:
 
-### Get All Products
-```
-GET /api/products
-```
-Returns a list of all products.
+The application provides JSON API endpoints:
 
-### Get Single Product
-```
-GET /api/products/{id}
-```
-Example:
-```
-GET /api/products/5
-```
-Returns details of a specific product.
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `GET /api/auth/user` - Get current user information
 
-### Get Cart Contents
-```
-GET /api/cart
-```
-Returns the current user's cart contents. Requires authentication.
+### Products
+- `GET /api/products` - List all products
+- `GET /api/products/{id}` - Get single product details
+- `GET /api/products/latest` - Get latest products
 
-## Security Features
-- Password hashing
-- SQL injection protection through PDO
-- XSS protection
-- CSRF protection
-- Secure session handling
-- Role-based access control
-- Secure file upload handling
-- Input validation and sanitization
+### Cart
+- `GET /api/cart` - Get cart contents
+- `POST /api/cart` - Add item to cart
+- `PUT /api/cart/{id}` - Update cart item
+- `DELETE /api/cart/{id}` - Remove cart item
+- `POST /api/cart/checkout` - Process checkout
 
-## Browser Support
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
+### Admin
+- `GET /api/admin/products` - List all products (admin)
+- `POST /api/admin/products` - Create product (admin)
+- `PUT /api/admin/products/{id}` - Update product (admin)
+- `DELETE /api/admin/products/{id}` - Delete product (admin)
+- `GET /api/admin/users` - List all users (admin)
+- `POST /api/admin/users` - Create user (admin)
+- `PUT /api/admin/users/{id}` - Update user (admin)
+- `GET /api/admin/orders` - List all orders (admin)
 
-## License
-MIT License
+## Notes
+- The application follows MVC architecture on the backend
+- All product images must be in JPG format
+- The database automatically seeds with sample products and users
+- The checkout process creates orders and clears the cart
+- Admin functionality is protected with role-based authentication
