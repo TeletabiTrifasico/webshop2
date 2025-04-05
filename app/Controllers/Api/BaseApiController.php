@@ -5,11 +5,35 @@ namespace App\Controllers\Api;
 use App\Utils\JWT;
 use App\Middleware\JwtMiddleware;
 
-class BaseApiController {
+abstract class BaseApiController {
+    protected $pdo;
+
     public function __construct() {
         // Initialize JWT with secret if defined
         if (defined('JWT_SECRET')) {
             JWT::init(JWT_SECRET);
+        }
+        $this->connectToDatabase();
+    }
+
+    protected function connectToDatabase() {
+        try {
+            $host = getenv('DB_HOST') ?: 'db';
+            $dbname = getenv('DB_NAME') ?: 'webshop_db';
+            $username = getenv('DB_USER') ?: 'webshopadmin';
+            $password = getenv('DB_PASSWORD') ?: '!webshopadmin2025';
+            
+            $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
+            $options = [
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                \PDO::ATTR_EMULATE_PREPARES => false,
+            ];
+            
+            $this->pdo = new \PDO($dsn, $username, $password, $options);
+        } catch (\PDOException $e) {
+            error_log("API controller database connection error: " . $e->getMessage());
+            throw new \Exception("Database connection error: " . $e->getMessage());
         }
     }
     

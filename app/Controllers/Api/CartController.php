@@ -13,13 +13,21 @@ class CartController extends BaseApiController {
     }
 
     public function index() {
-        // Require authentication
-        $this->requireAuth();
-        
         try {
-            // Get user ID from JWT token
-            $userData = $this->getAuthUser();
-            $userId = $userData['user_id'];
+            // Allow testing without authentication
+            try {
+                $this->requireAuth();
+                $userData = $this->getAuthUser();
+                $userId = $userData['user_id'];
+            } catch (\Exception $e) {
+                // Return empty cart for non-authenticated users
+                $this->jsonResponse([
+                    'success' => true,
+                    'items' => [],
+                    'guest' => true
+                ]);
+                return;
+            }
             
             $items = $this->cartModel->getCartItems($userId);
             
@@ -43,7 +51,11 @@ class CartController extends BaseApiController {
                 'items' => $formattedItems
             ]);
         } catch (\Exception $e) {
-            $this->handleException($e, 'Failed to fetch cart');
+            error_log("Cart index error: " . $e->getMessage());
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Failed to fetch cart: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -267,46 +279,77 @@ class CartController extends BaseApiController {
             // Calculate total amount (verify server side)
             $totalAmount = $this->cartModel->getTotal($userId);
             
-            // Create order
+            // Initialize order models
             $orderModel = $this->model('Order');
             $orderItemModel = $this->model('OrderItem');
             
-            // Create order with simplified data to match your schema
-            $orderData = [
-                'user_id' => $userId,
-                'status' => 'pending',
-                'total_amount' => $totalAmount
-            ];
+            // Log for debugging
+            error_log("Creating order for user: $userId with total: $totalAmount");
+            error_log("Cart items: " . json_encode($cartItems));
             
-            // Create order
-            $orderId = $orderModel->create($orderData);
+            // Begin transaction
+            $this->pdo->beginTransaction();
             
-            if (!$orderId) {
-                throw new \Exception('Failed to create order');
-            }
-            
-            // Add order items
-            foreach ($cartItems as $item) {
-                $orderItemModel->create([
-                    'order_id' => $orderId,
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price']
+            try {
+                // Create order
+                $orderData = [
+                    'user_id' => $userId,
+                    'status' => 'pending',
+                    'total_amount' => $totalAmount
+                ];
+                
+                $orderId = $orderModel->create($orderData);
+                
+                if (!$orderId) {
+                    throw new \Exception('Failed to create order');
+                }
+                
+                error_log("Order created with ID: $orderId");
+                
+                // Add order items
+                foreach ($cartItems as $item) {
+                    $orderItemData = [
+                        'order_id' => $orderId,
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price']
+                    ];
+                    
+                    $orderItemId = $orderItemModel->create($orderItemData);
+                    
+                    if (!$orderItemId) {
+                        throw new \Exception('Failed to create order item');
+                    }
+                    
+                    error_log("Order item created: $orderItemId");
+                }
+                
+                // Clear cart after successful order
+                $this->cartModel->clearCart($userId);
+                
+                // Commit transaction
+                $this->pdo->commit();
+                
+                $this->jsonResponse([
+                    'success' => true,
+                    'message' => 'Order placed successfully',
+                    'order_id' => $orderId
                 ]);
+                
+            } catch (\Exception $e) {
+                // Rollback transaction on error
+                $this->pdo->rollBack();
+                throw $e;
             }
             
-            // Clear cart after successful order
-            $this->cartModel->clearCart($userId);
-            
-            $this->jsonResponse([
-                'success' => true,
-                'message' => 'Order placed successfully',
-                'order_id' => $orderId
-            ]);
         } catch (\Exception $e) {
             error_log("Checkout error: " . $e->getMessage());
             error_log("Checkout error trace: " . $e->getTraceAsString());
-            $this->handleException($e, 'Failed to complete checkout');
+            
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Failed to complete checkout: ' . $e->getMessage()
+            ], 500);
         }
     }
     

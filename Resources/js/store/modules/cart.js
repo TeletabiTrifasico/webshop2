@@ -40,10 +40,10 @@ export default {
 
   actions: {
     async fetchCart({ commit, rootState }) {
-      // Skip if user is not authenticated
+      // Skip if user is not authenticated - return empty cart instead of error
       if (!rootState.auth.token) {
         commit('setItems', [])
-        return
+        return { success: true, items: [] }
       }
       
       commit('setLoading', true)
@@ -51,13 +51,18 @@ export default {
         const response = await axios.get('/api/cart')
         if (response.data.success) {
           commit('setItems', response.data.items || [])
+          return { success: true, items: response.data.items || [] }
         } else {
-          throw new Error(response.data.error || 'Failed to load cart')
+          console.error('Cart API returned error:', response.data.error)
+          commit('setError', response.data.error || 'Failed to load cart')
+          commit('setItems', [])
+          return { success: false, error: response.data.error }
         }
       } catch (error) {
         console.error('Error fetching cart:', error)
         commit('setError', 'Failed to load cart')
         commit('setItems', [])
+        return { success: false, error: error.message }
       } finally {
         commit('setLoading', false)
       }

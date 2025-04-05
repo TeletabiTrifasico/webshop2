@@ -18,68 +18,94 @@ class Order extends Model {
     }
 
     public function getAllWithUserDetails($page = 1, $limit = 10, $search = '') {
-        $offset = ($page - 1) * $limit;
-        
-        $query = "SELECT o.*, u.username FROM {$this->table} o 
-                  JOIN users u ON o.user_id = u.id";
-        $params = [];
-        
-        // Add search functionality
-        if (!empty($search)) {
-            $query .= " WHERE o.id LIKE ? OR u.username LIKE ? OR o.status LIKE ?";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+        try {
+            $offset = ($page - 1) * $limit;
+            
+            $whereClause = '';
+            $params = [];
+            
+            if (!empty($search)) {
+                $whereClause = "WHERE o.id LIKE ? OR u.username LIKE ?";
+                $searchTerm = "%{$search}%";
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            $query = "
+                SELECT o.*, u.username, u.email 
+                FROM {$this->table} o
+                JOIN users u ON o.user_id = u.id
+                {$whereClause}
+                ORDER BY o.created_at DESC
+                LIMIT ?, ?
+            ";
+            
+            $params[] = (int)$offset;
+            $params[] = (int)$limit;
+            
+            $stmt = $this->pdo->prepare($query);
+            
+            // Bind parameters with explicit types
+            foreach ($params as $i => $param) {
+                if (is_int($param)) {
+                    $stmt->bindValue($i + 1, $param, \PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($i + 1, $param);
+                }
+            }
+            
+            $stmt->execute();
+            return $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            error_log("Error getting orders: " . $e->getMessage());
+            return [];
         }
-        
-        $query .= " ORDER BY o.created_at DESC LIMIT ? OFFSET ?";
-        
-        $stmt = $this->pdo->prepare($query);
-        
-        // Bind parameters
-        foreach ($params as $i => $param) {
-            $stmt->bindValue($i + 1, $param);
-        }
-        
-        // Bind limit and offset as integers
-        $stmt->bindValue(count($params) + 1, (int)$limit, \PDO::PARAM_INT);
-        $stmt->bindValue(count($params) + 2, (int)$offset, \PDO::PARAM_INT);
-        
-        $stmt->execute();
-        return $stmt->fetchAll();
     }
 
     public function getTotal($search = '') {
-        $query = "SELECT COUNT(*) as total FROM {$this->table} o JOIN users u ON o.user_id = u.id";
-        $params = [];
-        
-        if (!empty($search)) {
-            $query .= " WHERE o.id LIKE ? OR u.username LIKE ? OR o.status LIKE ?";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
-            $params[] = "%{$search}%";
+        try {
+            $whereClause = '';
+            $params = [];
+            
+            if (!empty($search)) {
+                $whereClause = "WHERE o.id LIKE ? OR u.username LIKE ?";
+                $searchTerm = "%{$search}%";
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            $query = "
+                SELECT COUNT(*) as total 
+                FROM {$this->table} o
+                JOIN users u ON o.user_id = u.id
+                {$whereClause}
+            ";
+            
+            $stmt = $this->pdo->prepare($query);
+            $stmt->execute($params);
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            error_log("Error getting order count: " . $e->getMessage());
+            return 0;
         }
-        
-        $stmt = $this->pdo->prepare($query);
-        
-        foreach ($params as $i => $param) {
-            $stmt->bindValue($i + 1, $param);
-        }
-        
-        $stmt->execute();
-        $result = $stmt->fetch();
-        return (int)$result['total'];
     }
 
     public function getWithDetails($orderId) {
-        $stmt = $this->pdo->prepare("
-            SELECT o.*, u.username, u.email 
-            FROM {$this->table} o
-            JOIN users u ON o.user_id = u.id
-            WHERE o.id = ?
-        ");
-        $stmt->execute([(int)$orderId]);
-        return $stmt->fetch();
+        try {
+            $query = "
+                SELECT o.*, u.username, u.email 
+                FROM {$this->table} o
+                JOIN users u ON o.user_id = u.id
+                WHERE o.id = ?
+            ";
+            
+            $stmt = $this->pdo->prepare($query);
+            $stmt->execute([$orderId]);
+            return $stmt->fetch();
+        } catch (\PDOException $e) {
+            error_log("Error getting order details: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function create($data) {
@@ -151,10 +177,17 @@ class Order extends Model {
     }
 
     public function updateStatus($orderId, $status) {
-        $stmt = $this->pdo->prepare("
-            UPDATE {$this->table} SET status = ? WHERE id = ?
-        ");
-        return $stmt->execute([$status, (int)$orderId]);
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE {$this->table} 
+                SET status = ? 
+                WHERE id = ?
+            ");
+            return $stmt->execute([$status, $orderId]);
+        } catch (\PDOException $e) {
+            error_log("Error updating order status: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function delete($id) {

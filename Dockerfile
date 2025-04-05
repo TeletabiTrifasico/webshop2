@@ -10,13 +10,14 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libzip-dev \
     curl \
-    gnupg
+    gnupg \
+    default-mysql-client
 
 # Add NodeSource repository and install Node.js 18.x
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
-# Configure and install PHP extensions - make sure mysqli and pdo_mysql are included
+# Configure and install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd mysqli pdo pdo_mysql zip
 
@@ -29,16 +30,9 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . /var/www/html/
 
-# Create directory structure for autoloading
-RUN mkdir -p /var/www/html/App/Utils
-RUN mkdir -p /var/www/html/App/Middleware
-RUN mkdir -p /var/www/html/App/Controllers/Api
-RUN mkdir -p /var/www/html/App/Models
-
-# Create symbolic links for case-insensitive paths
-RUN if [ -d "/var/www/html/app" ] && [ ! -d "/var/www/html/App" ]; then \
-    cp -R /var/www/html/app/* /var/www/html/App/; \
-    fi
+# Make entrypoint script executable
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -55,18 +49,10 @@ RUN chown -R www-data:www-data /var/www/html
 # Configure Apache document root
 RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www\/html\/public/g' /etc/apache2/sites-available/000-default.conf
 
-# Create a PHP info file for testing
+# Create debugging pages
 RUN echo "<?php phpinfo(); ?>" > /var/www/html/public/info.php
-
-# Apache environment setup - Create a custom PHP configuration file for environment variables
-RUN echo "<?php\n\
-putenv('DB_HOST=db');\n\
-putenv('DB_NAME=webshop_db');\n\
-putenv('DB_USER=webshopadmin');\n\
-putenv('DB_PASSWORD=!webshopadmin2025');\n\
-?>" > /var/www/html/public/env.php
 
 # Expose port 80
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

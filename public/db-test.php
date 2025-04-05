@@ -1,5 +1,5 @@
 <?php
-// Simple database connection test
+// Database connection test
 $host = getenv('DB_HOST') ?: 'db';
 $dbname = getenv('DB_NAME') ?: 'webshop_db';
 $username = getenv('DB_USER') ?: 'webshopadmin';

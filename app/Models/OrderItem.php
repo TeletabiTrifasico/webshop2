@@ -5,12 +5,12 @@ namespace App\Models;
 class OrderItem extends Model {
     protected $table = 'order_items';
     
-    // Create new order item - updated to match your schema
+    // Create new order item - modified to match your actual database schema
     public function create($data) {
         try {
             $stmt = $this->pdo->prepare("
-                INSERT INTO {$this->table} (order_id, product_id, quantity, price, created_at)
-                VALUES (?, ?, ?, ?, NOW())
+                INSERT INTO {$this->table} (order_id, product_id, quantity, price)
+                VALUES (?, ?, ?, ?)
             ");
             
             $stmt->execute([
@@ -27,15 +27,22 @@ class OrderItem extends Model {
         }
     }
     
-    // Get all items for a specific order
+    // Get items for a specific order
     public function getByOrderId($orderId) {
-        $stmt = $this->pdo->prepare("
-            SELECT oi.*, p.name as product_name, p.image as product_image 
-            FROM {$this->table} oi
-            JOIN products p ON oi.product_id = p.id
-            WHERE oi.order_id = ?
-        ");
-        $stmt->execute([(int)$orderId]);
-        return $stmt->fetchAll();
+        try {
+            $query = "
+                SELECT oi.*, p.name as product_name, p.image as product_image
+                FROM {$this->table} oi
+                JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = ?
+            ";
+            
+            $stmt = $this->pdo->prepare($query);
+            $stmt->execute([$orderId]);
+            return $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            error_log("Error getting order items: " . $e->getMessage());
+            return [];
+        }
     }
 }
