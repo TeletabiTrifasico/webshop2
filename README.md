@@ -61,6 +61,42 @@ webshop/
     └── index.php
 ```
 
+## Docker Installation for Quick Setup
+
+### Prerequisites
+- Docker Desktop installed on your system
+- Git (optional, if you want to clone the repository)
+
+### Steps to Run the Project
+1. Download or clone this repository
+2. Open a terminal/command prompt and navigate to the project folder
+3. Run the following command to start the containers:
+   ```bash
+   docker-compose up -d
+   ```
+4. Wait for the containers to build and start (this might take a few minutes the first time)
+5. Access the application at: http://localhost:8088
+
+### Default Login Credentials
+- Admin User:
+  - Email: admin@webshop.com
+  - Password: password
+- Sample User:
+  - Email: john@example.com
+  - Password: password
+
+### To Stop the Project
+```bash
+docker-compose down
+```
+
+### Troubleshooting
+If you encounter any issues:
+1. Check Docker logs: `docker-compose logs`
+2. Ensure ports 8088 and 3307 are not in use
+3. Try rebuilding containers: `docker-compose up -d --build`
+4. Clear all Docker data: `docker system prune -a --volumes` (use with caution)
+
 ## Docker Installation
 1. Install Docker Desktop for Windows from [Docker's official website](https://www.docker.com/products/docker-desktop/)
 

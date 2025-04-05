@@ -2,14 +2,48 @@
 
 namespace App\Models;
 
-class Model {
+abstract class Model {
     protected $pdo;
     protected $table;
     protected $primaryKey = 'id';
 
     public function __construct() {
-        global $pdo;
-        $this->pdo = $pdo;
+        $this->connectToDatabase();
+    }
+
+    protected function connectToDatabase() {
+        // Check if env.php exists and include it
+        if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/env.php')) {
+            include_once $_SERVER['DOCUMENT_ROOT'] . '/env.php';
+        }
+        
+        // Use environment variables with fallbacks
+        $host = getenv('DB_HOST') ?: 'db';
+        $dbname = getenv('DB_NAME') ?: 'webshop_db';
+        $username = getenv('DB_USER') ?: 'webshopadmin';
+        $password = getenv('DB_PASSWORD') ?: '!webshopadmin2025';
+        
+        try {
+            // Log connection attempt
+            error_log("Attempting to connect to database: host=$host, db=$dbname, user=$username");
+            
+            // Create DSN with explicit charset and connection timeout
+            $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8mb4";
+            $options = [
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                \PDO::ATTR_EMULATE_PREPARES => false,
+                \PDO::ATTR_TIMEOUT => 5 // 5 second timeout
+            ];
+            
+            $this->pdo = new \PDO($dsn, $username, $password, $options);
+            error_log("Database connection successful");
+        } catch (\PDOException $e) {
+            // Log detailed connection error
+            error_log("Database connection failed: " . $e->getMessage());
+            // Throw the exception to be caught by error handler
+            throw new \Exception("Database connection error: " . $e->getMessage());
+        }
     }
 
     protected function executeWithIntParams($query, $params = []) {

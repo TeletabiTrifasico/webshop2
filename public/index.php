@@ -1,11 +1,6 @@
 <?php
-// Load configurations first
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-// Add explicit include for JWT class
-require_once __DIR__ . '/../app/Utils/JWT.php';
-require_once __DIR__ . '/../app/Middleware/JwtMiddleware.php';
+// Load bootstrap file that handles autoloading and critical includes
+require_once __DIR__ . '/bootstrap.php';
 
 // Enable CORS
 header('Access-Control-Allow-Origin: *');
@@ -98,8 +93,6 @@ if (class_exists('\\App\\Utils\\JWT')) {
 } else {
     error_log("Critical error: JWT class not found. Check autoloading.");
 }
-
-session_start();
 
 // Handle method spoofing for forms
 $_method = $_SERVER['REQUEST_METHOD'];

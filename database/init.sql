@@ -1,3 +1,7 @@
+-- Create database if not exists
+CREATE DATABASE IF NOT EXISTS webshop_db;
+USE webshop_db;
+
 -- Create tables
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,

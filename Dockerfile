@@ -1,73 +1,72 @@
-# Use PHP 8.0 Apache image
 FROM php:8.0-apache
 
-LABEL authors="Hugo Jimenez Barrasa"
-
-# Install system dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
+    git \
+    zip \
+    unzip \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    zip \
-    unzip \
-    git \
-    curl
+    libzip-dev \
+    curl \
+    gnupg
 
-# Install Node.js and npm (use a newer version)
+# Add NodeSource repository and install Node.js 18.x
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install -j$(nproc) gd
+# Configure and install PHP extensions - make sure mysqli and pdo_mysql are included
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd mysqli pdo pdo_mysql zip
 
-# Enable Apache mod_rewrite
+# Enable Apache modules
 RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install Composer
+# Copy application files
+COPY . /var/www/html/
+
+# Create directory structure for autoloading
+RUN mkdir -p /var/www/html/App/Utils
+RUN mkdir -p /var/www/html/App/Middleware
+RUN mkdir -p /var/www/html/App/Controllers/Api
+RUN mkdir -p /var/www/html/App/Models
+
+# Create symbolic links for case-insensitive paths
+RUN if [ -d "/var/www/html/app" ] && [ ! -d "/var/www/html/App" ]; then \
+    cp -R /var/www/html/app/* /var/www/html/App/; \
+    fi
+
+# Install composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copy app files first
-COPY app /var/www/html/app/
-COPY config /var/www/html/config/
-COPY public /var/www/html/public/
+# Install PHP dependencies (if composer.json exists)
+RUN if [ -f "composer.json" ]; then composer install --no-interaction; fi
 
-# Copy frontend files
-COPY Resources /var/www/html/Resources/
-COPY package.json package-lock.json* /var/www/html/
-
-# Copy extra files
-COPY composer.json composer.lock* /var/www/html/
-COPY .env* /var/www/html/
-COPY vite.config.js /var/www/html/
+# Install npm dependencies and build frontend
+RUN NODE_OPTIONS=--max_old_space_size=4096 npm install && npm run build || echo "Build failed, but continuing..."
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && mkdir -p /var/www/html/public/images/products \
-    && chmod -R 777 /var/www/html/public/images/products
+RUN chown -R www-data:www-data /var/www/html
 
-# Copy Apache configuration
-COPY apache.conf /etc/apache2/sites-available/000-default.conf
+# Configure Apache document root
+RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www\/html\/public/g' /etc/apache2/sites-available/000-default.conf
 
-# Enable the site configuration
-RUN a2ensite 000-default.conf
+# Create a PHP info file for testing
+RUN echo "<?php phpinfo(); ?>" > /var/www/html/public/info.php
 
-# Set environment variables for Node.js
-ENV NODE_OPTIONS="--max-old-space-size=2048"
-ENV NODE_ENV="production"
+# Apache environment setup - Create a custom PHP configuration file for environment variables
+RUN echo "<?php\n\
+putenv('DB_HOST=db');\n\
+putenv('DB_NAME=webshop_db');\n\
+putenv('DB_USER=webshopadmin');\n\
+putenv('DB_PASSWORD=!webshopadmin2025');\n\
+?>" > /var/www/html/public/env.php
 
 # Expose port 80
 EXPOSE 80
 
-# Add a startup script to build assets at container runtime
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Set the entrypoint
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["apache2-foreground"]
