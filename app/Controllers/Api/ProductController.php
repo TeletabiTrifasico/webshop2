@@ -274,10 +274,10 @@ class ProductController extends BaseApiController {
         
         $file = $_FILES['image'];
         
-        // Validate file type
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        // Validate file type - ONLY allow JPG
+        $allowedTypes = ['image/jpeg'];
         if (!in_array($file['type'], $allowedTypes)) {
-            error_log("Invalid image type: {$file['type']}");
+            error_log("Invalid image type: {$file['type']} - Only JPG allowed");
             return null;
         }
         

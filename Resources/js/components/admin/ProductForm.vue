@@ -63,9 +63,9 @@
                   class="form-control" 
                   id="productImage" 
                   @change="handleFileChange" 
-                  accept="image/*"
+                  accept="image/jpeg"
                 >
-                <small class="form-text text-muted">
+                <small class="form-text text-muted d-block mt-1">
                   Supported formats: JPG
                 </small>
               </div>
@@ -117,11 +117,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import { useToast } from '@/composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
-const { addToast } = useToast()
 
 // Form data
 const product = ref({
@@ -145,6 +143,13 @@ const title = computed(() => isEditing.value ? 'Edit Product' : 'Add New Product
 const handleFileChange = (e) => {
   const file = e.target.files[0]
   if (!file) return
+  
+  // Add validation for JPG only
+  if (!file.type.includes('jpeg')) {
+    error.value = 'Only JPG images are supported'
+    e.target.value = '' // Clear the input
+    return
+  }
   
   imageFile.value = file
   
@@ -171,7 +176,6 @@ const fetchProduct = async () => {
   } catch (err) {
     error.value = 'Failed to load product'
     console.error(err)
-    addToast('Failed to load product', 'error')
   } finally {
     loading.value = false
   }
@@ -188,14 +192,9 @@ const saveProduct = async () => {
     formData.append('price', product.value.price)
     formData.append('description', product.value.description || '')
     
-    // Only append image if a new one was selected - don't append old path
+    // Only append image if a new one was selected
     if (imageFile.value) {
       formData.append('image', imageFile.value)
-    }
-    
-    // Log FormData contents for debugging
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value instanceof File ? `File: ${value.name}` : value}`)
     }
     
     let response
@@ -218,7 +217,6 @@ const saveProduct = async () => {
     }
     
     if (response.data.success) {
-      addToast(response.data.message || 'Product saved successfully', 'success')
       router.push('/admin/products')
     } else {
       throw new Error(response.data.error || 'Failed to save product')
@@ -226,7 +224,6 @@ const saveProduct = async () => {
   } catch (err) {
     console.error('Save product error:', err)
     error.value = err.message || 'Failed to save product'
-    addToast('Error: ' + error.value, 'error')
   } finally {
     loading.value = false
   }
