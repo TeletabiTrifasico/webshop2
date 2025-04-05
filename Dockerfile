@@ -52,6 +52,11 @@ RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www\/html\/publi
 # Create debugging pages
 RUN echo "<?php phpinfo(); ?>" > /var/www/html/public/info.php
 
+# Create product images directory with proper permissions
+RUN mkdir -p /var/www/html/public/images/products && \
+    chown -R www-data:www-data /var/www/html/public/images && \
+    chmod -R 755 /var/www/html/public/images
+
 # Expose port 80
 EXPOSE 80
 

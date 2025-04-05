@@ -91,7 +91,7 @@ $routes = [
     '#^/api/admin/products/(\d+)$#' => [
         'GET' => [\App\Controllers\Api\ProductController::class, 'show'],
         'PUT' => [\App\Controllers\Api\ProductController::class, 'update'],
-        'DELETE' => [\App\Controllers\Api\AdminController::class, 'deleteProduct']
+        'DELETE' => [\App\Controllers\Api\ProductController::class, 'delete']
     ],
     
     // Admin order management

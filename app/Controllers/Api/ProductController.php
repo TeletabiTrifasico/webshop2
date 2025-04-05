@@ -90,6 +90,7 @@ class ProductController extends BaseApiController {
         $this->requireAdmin();
         
         try {
+            // Get product data from POST request
             $data = $this->getRequestData();
             
             // Basic validation
@@ -109,7 +110,16 @@ class ProductController extends BaseApiController {
                 'image' => $data['image'] ?? null
             ];
             
-            // Handle image upload (if applicable for your implementation)
+            // Handle image upload
+            $imageUrl = $this->handleImageUpload();
+            if ($imageUrl) {
+                $productData['image'] = $imageUrl;
+            } else if (empty($productData['image'])) {
+                $productData['image'] = '/images/products/placeholder.jpg'; // Default image
+            }
+            
+            // Debug image path
+            error_log("Image path for new product: " . ($productData['image'] ?? 'none'));
             
             $productId = $this->productModel->create($productData);
             
@@ -153,36 +163,37 @@ class ProductController extends BaseApiController {
             }
             
             $data = $this->getRequestData();
-            $productData = [];
             
-            // Update name if provided
+            // Log the incoming data for debugging
+            error_log("Update product request data: " . json_encode($data));
+            error_log("Files: " . json_encode($_FILES));
+            
+            // Initialize productData with existing product values
+            $productData = [
+                'name' => $product['name'],
+                'description' => $product['description'],
+                'price' => $product['price'],
+                'image' => $product['image'] // Keep existing image by default
+            ];
+            
+            // Update fields if provided
             if (isset($data['name'])) {
                 $productData['name'] = trim($data['name']);
             }
             
-            // Update description if provided
             if (isset($data['description'])) {
                 $productData['description'] = $data['description'];
             }
             
-            // Update price if provided
             if (isset($data['price'])) {
                 $productData['price'] = (float)$data['price'];
             }
             
-            // Update image if provided
-            if (isset($data['image'])) {
-                $productData['image'] = $data['image'];
-            }
-            
-            // Only update if there are changes
-            if (empty($productData)) {
-                $this->jsonResponse([
-                    'success' => true,
-                    'message' => 'No changes to update',
-                    'product' => $product
-                ]);
-                return;
+            // Only process image if a new one was uploaded
+            $imageUrl = $this->handleImageUpload();
+            if ($imageUrl) {
+                $productData['image'] = $imageUrl;
+                error_log("New image uploaded for product $id: $imageUrl");
             }
             
             $success = $this->productModel->update($id, $productData);
@@ -217,26 +228,20 @@ class ProductController extends BaseApiController {
 
     // Admin methods for product management
     public function delete($id) {
-        parent::requireAdmin();
-        
-        $product = $this->productModel->findById($id);
-        if (!$product) {
-            $this->jsonResponse([
-                'success' => false,
-                'error' => 'Product not found'
-            ], 404);
-            return;
-        }
-        
         try {
-            // Delete product image if it's not the default one
-            if ($product['image'] && $product['image'] !== 'default.jpg') {
-                $imagePath = __DIR__ . '/../../public/uploads/' . $product['image'];
-                if (file_exists($imagePath)) {
-                    unlink($imagePath);
-                }
+            $this->requireAdmin();
+            
+            // Check if product exists
+            $product = $this->productModel->findById($id);
+            if (!$product) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'error' => 'Product not found'
+                ], 404);
+                return;
             }
             
+            // Delete product from database
             $result = $this->productModel->delete($id);
             
             if ($result) {
@@ -245,30 +250,59 @@ class ProductController extends BaseApiController {
                     'message' => 'Product deleted successfully'
                 ]);
             } else {
-                throw new \Exception('Failed to delete product');
+                $this->jsonResponse([
+                    'success' => false,
+                    'error' => 'Failed to delete product'
+                ], 500);
             }
         } catch (\Exception $e) {
-            parent::handleException($e, 'Failed to delete product');
+            error_log("Error deleting product: " . $e->getMessage());
+            $this->jsonResponse([
+                'success' => false,
+                'error' => 'Failed to delete product: ' . $e->getMessage()
+            ], 500);
         }
     }
     
-    // Helper method for image upload
-    private function handleImageUpload($file) {
-        $uploadDir = __DIR__ . '/../../public/uploads/';
-        
-        // Create directory if it doesn't exist
-        if (!file_exists($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
+    // Helper method to handle image uploads
+    private function handleImageUpload() {
+        // Check if an image was uploaded
+        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            error_log("No image uploaded or upload error: " . ($_FILES['image']['error'] ?? 'No file'));
+            return null;
         }
         
-        // Generate unique filename
-        $filename = md5(uniqid() . time()) . '.' . pathinfo($file['name'], PATHINFO_EXTENSION);
-        $targetFile = $uploadDir . $filename;
+        $file = $_FILES['image'];
         
-        if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-            return $filename;
+        // Validate file type
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!in_array($file['type'], $allowedTypes)) {
+            error_log("Invalid image type: {$file['type']}");
+            return null;
         }
         
-        return null;
+        // Create products directory if it doesn't exist
+        $uploadDir = __DIR__ . '/../../../public/images/products/';
+        if (!is_dir($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                error_log("Failed to create directory: $uploadDir");
+                return null;
+            }
+        }
+        
+        // Generate unique filename to prevent overwrites
+        $filename = uniqid() . '_' . basename($file['name']);
+        $uploadPath = $uploadDir . $filename;
+        
+        error_log("Attempting to move uploaded file to: $uploadPath");
+        
+        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+            // Return the relative path for database storage
+            return '/images/products/' . $filename;
+        } else {
+            $uploadError = error_get_last();
+            error_log("Failed to move uploaded file: " . ($uploadError['message'] ?? 'Unknown error'));
+            return null;
+        }
     }
 }

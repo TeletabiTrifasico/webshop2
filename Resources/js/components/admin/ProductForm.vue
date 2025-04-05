@@ -62,11 +62,11 @@
                   type="file" 
                   class="form-control" 
                   id="productImage" 
-                  @change="handleImageChange" 
+                  @change="handleFileChange" 
                   accept="image/*"
                 >
                 <small class="form-text text-muted">
-                  Supported formats: JPG, PNG, GIF, WEBP
+                  Supported formats: JPG
                 </small>
               </div>
 
@@ -113,124 +113,127 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { useToast } from '@/composables/useToast'
 
-export default {
-  name: 'ProductForm',
+const route = useRoute()
+const router = useRouter()
+const { addToast } = useToast()
 
-  setup() {
-    const route = useRoute()
-    const router = useRouter()
-    const productId = computed(() => route.params.id)
-    const isEditing = computed(() => !!productId.value)
-    const loading = ref(false)
-    const error = ref(null)
-    const imageFile = ref(null)
-    const imagePreview = ref(null)
+// Form data
+const product = ref({
+  name: '',
+  description: '',
+  price: '',
+  image: ''
+})
 
-    const product = ref({
-      name: '',
-      description: '',
-      price: '',
-      image: ''
-    })
+const imageFile = ref(null)
+const imagePreview = ref(null)
+const loading = ref(false)
+const error = ref(null)
 
-    const handleImageChange = (e) => {
-      const file = e.target.files[0]
-      if (!file) return
-      
-      imageFile.value = file
-      
-      // Create preview
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        imagePreview.value = e.target.result
-      }
-      reader.readAsDataURL(file)
+// Computed properties
+const isEditing = computed(() => !!route.params.id)
+const productId = computed(() => route.params.id)
+const title = computed(() => isEditing.value ? 'Edit Product' : 'Add New Product')
+
+// Methods
+const handleFileChange = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  
+  imageFile.value = file
+  
+  // Create preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const fetchProduct = async () => {
+  if (!isEditing.value) return
+
+  try {
+    loading.value = true
+    const response = await axios.get(`/api/admin/products/${productId.value}`)
+    
+    if (response.data.product) {
+      product.value = response.data.product
+    } else {
+      throw new Error('Product not found')
     }
-
-    const fetchProduct = async () => {
-      if (!isEditing.value) return
-
-      try {
-        loading.value = true
-        const response = await axios.get(`/api/products/${productId.value}`)
-        
-        if (response.data.product) {
-          product.value = response.data.product
-        } else {
-          throw new Error('Product not found')
-        }
-      } catch (err) {
-        error.value = 'Failed to load product'
-        console.error(err)
-      } finally {
-        loading.value = false
-      }
-    }
-
-    const saveProduct = async () => {
-      try {
-        loading.value = true
-        error.value = null
-        
-        // Create FormData for file upload
-        const formData = new FormData()
-        formData.append('name', product.value.name)
-        formData.append('description', product.value.description || '')
-        formData.append('price', product.value.price)
-        
-        if (imageFile.value) {
-          formData.append('image', imageFile.value)
-        }
-        
-        let response
-        
-        if (isEditing.value) {
-          // For editing, use axios instead of fetch to handle FormData properly with PUT
-          response = await axios.post(`/api/admin/products/${productId.value}?_method=PUT`, formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          })
-        } else {
-          // For creating new products
-          response = await axios.post('/api/admin/products', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          })
-        }
-        
-        if (response.data.success) {
-          router.push('/admin/products')
-        } else {
-          throw new Error(response.data.error || 'Failed to save product')
-        }
-      } catch (err) {
-        error.value = err.response?.data?.error || err.message || 'An error occurred while saving the product'
-        console.error(err)
-      } finally {
-        loading.value = false
-      }
-    }
-
-    onMounted(() => {
-      fetchProduct()
-    })
-
-    return {
-      product,
-      isEditing,
-      loading,
-      error,
-      imagePreview,
-      handleImageChange,
-      saveProduct
-    }
+  } catch (err) {
+    error.value = 'Failed to load product'
+    console.error(err)
+    addToast('Failed to load product', 'error')
+  } finally {
+    loading.value = false
   }
 }
+
+const saveProduct = async () => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    // Create FormData for file upload
+    const formData = new FormData()
+    formData.append('name', product.value.name)
+    formData.append('price', product.value.price)
+    formData.append('description', product.value.description || '')
+    
+    // Only append image if a new one was selected - don't append old path
+    if (imageFile.value) {
+      formData.append('image', imageFile.value)
+    }
+    
+    // Log FormData contents for debugging
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}: ${value instanceof File ? `File: ${value.name}` : value}`)
+    }
+    
+    let response
+    
+    if (isEditing.value) {
+      // Update existing product
+      formData.append('_method', 'PUT') // Method spoofing for PUT
+      response = await axios.post(`/api/admin/products/${productId.value}?_method=PUT`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    } else {
+      // Create new product
+      response = await axios.post('/api/admin/products', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    }
+    
+    if (response.data.success) {
+      addToast(response.data.message || 'Product saved successfully', 'success')
+      router.push('/admin/products')
+    } else {
+      throw new Error(response.data.error || 'Failed to save product')
+    }
+  } catch (err) {
+    console.error('Save product error:', err)
+    error.value = err.message || 'Failed to save product'
+    addToast('Error: ' + error.value, 'error')
+  } finally {
+    loading.value = false
+  }
+}
+
+// Lifecycle hooks
+onMounted(() => {
+  fetchProduct()
+})
 </script>
