@@ -12,6 +12,143 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+// Get request path and method
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$_method = $_SERVER['REQUEST_METHOD'];
+
+// Handle method spoofing for forms
+if ($_method === 'POST' && isset($_GET['_method'])) {
+    $_method = strtoupper($_GET['_method']);
+}
+
+// Define routes and their corresponding controllers/methods
+$routes = [
+    // Auth routes
+    '#^/api/auth/register$#' => [
+        'POST' => [\App\Controllers\Api\AuthController::class, 'register']
+    ],
+    '#^/api/auth/login$#' => [
+        'POST' => [\App\Controllers\Api\AuthController::class, 'login']
+    ],
+    '#^/api/auth/logout$#' => [
+        'POST' => [\App\Controllers\Api\AuthController::class, 'logout']
+    ],
+    '#^/api/auth/user$#' => [
+        'GET' => [\App\Controllers\Api\AuthController::class, 'getCurrentUser']
+    ],
+
+    // Product routes
+    '#^/api/products$#' => [
+        'GET' => [\App\Controllers\Api\ProductController::class, 'index']
+    ],
+    '#^/api/products/latest$#' => [
+        'GET' => [\App\Controllers\Api\ProductController::class, 'latest']
+    ],
+    '#^/api/products/(\d+)$#' => [
+        'GET' => [\App\Controllers\Api\ProductController::class, 'show']
+    ],
+
+    // Cart routes
+    '#^/api/cart$#' => [
+        'GET' => [\App\Controllers\Api\CartController::class, 'index'],
+        'POST' => [\App\Controllers\Api\CartController::class, 'addItem']
+    ],
+    '#^/api/cart/(\d+)$#' => [
+        'PUT' => [\App\Controllers\Api\CartController::class, 'updateItem'],
+        'DELETE' => [\App\Controllers\Api\CartController::class, 'removeItem']
+    ],
+    '#^/api/cart/clear$#' => [
+        'POST' => [\App\Controllers\Api\CartController::class, 'clearCart']
+    ],
+    '#^/api/cart/checkout$#' => [
+        'POST' => [\App\Controllers\Api\CartController::class, 'checkout']
+    ],
+
+    // Admin routes
+    '#^/api/admin/dashboard$#' => [
+        'GET' => [\App\Controllers\Api\AdminController::class, 'getDashboardStats']
+    ],
+    
+    // Admin user management
+    '#^/api/admin/users$#' => [
+        'GET' => [\App\Controllers\Api\AdminController::class, 'getUsers'],
+        'POST' => [\App\Controllers\Api\UserAdminController::class, 'create']
+    ],
+    '#^/api/admin/users/(\d+)$#' => [
+        'GET' => [\App\Controllers\Api\UserAdminController::class, 'get'],
+        'PUT' => [\App\Controllers\Api\UserAdminController::class, 'update'],
+        'DELETE' => [\App\Controllers\Api\AdminController::class, 'deleteUser']
+    ],
+    '#^/api/admin/users/(\d+)/role$#' => [
+        'PUT' => [\App\Controllers\Api\AdminController::class, 'updateUserRole']
+    ],
+    
+    // Admin product management
+    '#^/api/admin/products$#' => [
+        'GET' => [\App\Controllers\Api\AdminController::class, 'getProducts'],
+        'POST' => [\App\Controllers\Api\ProductController::class, 'create']
+    ],
+    '#^/api/admin/products/(\d+)$#' => [
+        'GET' => [\App\Controllers\Api\ProductController::class, 'show'],
+        'PUT' => [\App\Controllers\Api\ProductController::class, 'update'],
+        'DELETE' => [\App\Controllers\Api\AdminController::class, 'deleteProduct']
+    ],
+    
+    // Admin order management
+    '#^/api/admin/orders$#' => [
+        'GET' => [\App\Controllers\Api\AdminController::class, 'getOrders']
+    ],
+    '#^/api/admin/orders/(\d+)$#' => [
+        'GET' => [\App\Controllers\Api\AdminController::class, 'getOrderDetails'],
+        'PUT' => [\App\Controllers\Api\AdminController::class, 'updateOrderStatus']
+    ],
+
+    // User profile routes
+    '#^/api/user/profile$#' => [
+        'GET' => [\App\Controllers\Api\UserAdminController::class, 'getProfile'],
+        'PUT' => [\App\Controllers\Api\UserAdminController::class, 'updateProfile']
+    ],
+    '#^/api/user/orders$#' => [
+        'GET' => [\App\Controllers\Api\UserAdminController::class, 'getOrders']
+    ],
+    '#^/api/user/orders/(\d+)$#' => [
+        'GET' => [\App\Controllers\Api\UserAdminController::class, 'getOrderDetails']
+    ],
+];
+
+// Route matching and dispatching
+$routeFound = false;
+foreach ($routes as $pattern => $handlers) {
+    if (preg_match($pattern, $path, $matches)) {
+        if (isset($handlers[$_method])) {
+            $routeFound = true;
+            
+            // Get controller class and method
+            list($controllerClass, $method) = $handlers[$_method];
+            
+            // Remove the full match from the matches array
+            array_shift($matches);
+            
+            // Create controller instance and call the method with parameters
+            $controller = new $controllerClass();
+            call_user_func_array([$controller, $method], $matches);
+            
+            // Exit after handling the route
+            exit;
+        }
+    }
+}
+
+// No matching route found, return 404
+if (!$routeFound) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false,
+        'error' => 'Route not found'
+    ]);
+    exit;
+}
+
 // Define correct MIME types for common file extensions
 $mimeTypes = [
     'js' => 'application/javascript',
@@ -92,102 +229,6 @@ if (class_exists('\\App\\Utils\\JWT')) {
     \App\Utils\JWT::init(JWT_SECRET);
 } else {
     error_log("Critical error: JWT class not found. Check autoloading.");
-}
-
-// Handle method spoofing for forms
-$_method = $_SERVER['REQUEST_METHOD'];
-if ($_method === 'POST' && isset($_GET['_method'])) {
-    $_method = strtoupper($_GET['_method']);
-}
-
-// API Routes configuration
-$apiRoutes = [
-    // Auth routes
-    '/api/auth/login' => ['Api\AuthController', 'login'],
-    '/api/auth/register' => ['Api\AuthController', 'register'],
-    '/api/auth/logout' => ['Api\AuthController', 'logout'],
-    
-    // Product routes
-    '/api/products/latest' => ['Api\ProductController', 'latest'],
-    '/api/products/(\d+)' => ['Api\ProductController', 'show'],
-    '/api/products' => ['Api\ProductController', 'index'],
-    
-    // Cart routes
-    '/api/cart' => ['Api\CartController', 'index'],
-    '/api/cart/items' => ['Api\CartController', 'getCartItems'],
-    
-    // Admin routes
-    '/api/admin/dashboard/stats' => ['Api\AdminController', 'getDashboardStats'],
-    '/api/admin/users' => ['Api\AdminController', 'getUsers'],
-    '/api/admin/orders' => ['Api\AdminController', 'getOrders'],
-];
-
-// Routes with specific HTTP methods
-$apiRoutesMethods = [
-    // User management routes
-    'GET:/api/admin/users/(\d+)' => ['Api\AdminController', 'getUser'],
-    'POST:/api/admin/users' => ['Api\AdminController', 'createUser'],
-    'PUT:/api/admin/users/(\d+)' => ['Api\UserAdminController', 'update'],
-    'PUT:/api/admin/users/(\d+)/role' => ['Api\AdminController', 'updateUserRole'],
-    'DELETE:/api/admin/users/(\d+)' => ['Api\AdminController', 'deleteUser'],
-    
-    // Admin order routes
-    'GET:/api/admin/orders/(\d+)' => ['Api\AdminController', 'getOrderDetails'],
-    'PUT:/api/admin/orders/(\d+)/status' => ['Api\AdminController', 'updateOrderStatus'],
-    'DELETE:/api/admin/orders/(\d+)' => ['Api\AdminController', 'deleteOrder'],
-    
-    // Admin product routes
-    'POST:/api/admin/products' => ['Api\ProductController', 'create'],
-    'PUT:/api/admin/products/(\d+)' => ['Api\ProductController', 'update'],
-    'POST:/api/admin/products/(\d+)' => ['Api\AdminProductController', 'update'],  // Allow POST for PUT with _method
-    'DELETE:/api/admin/products/(\d+)' => ['Api\ProductController', 'delete'],
-    
-    // Cart routes with methods
-    'GET:/api/cart' => ['Api\CartController', 'index'],
-    'GET:/api/cart/items' => ['Api\CartController', 'getCartItems'],
-    'POST:/api/cart/add' => ['Api\CartController', 'addItem'],
-    'POST:/api/cart/update' => ['Api\CartController', 'updateItem'],
-    'POST:/api/cart/remove' => ['Api\CartController', 'removeItem'],
-    'POST:/api/cart/clear' => ['Api\CartController', 'clearCart'],
-    'POST:/api/cart/checkout' => ['Api\CartController', 'checkout'],
-];
-
-// Handle API requests
-if (strpos($_SERVER['REQUEST_URI'], '/api/') === 0) {
-    $request = $_SERVER['REQUEST_URI'];
-    $path = parse_url($request, PHP_URL_PATH);
-    $path = rtrim($path, '/');
-    $method = $_method;  // Use the potentially spoofed method
-
-    // First check method-specific routes
-    $methodPath = "$method:$path";
-    foreach ($apiRoutesMethods as $pattern => [$controller, $action]) {
-        $methodPattern = explode(':', $pattern)[0];
-        $urlPattern = explode(':', $pattern)[1];
-        
-        if ($methodPattern === $method && preg_match("#^$urlPattern$#", $path, $matches)) {
-            $controller = "\\App\\Controllers\\$controller";
-            $controller = new $controller();
-            array_shift($matches);
-            call_user_func_array([$controller, $action], $matches);
-            exit;
-        }
-    }
-
-    // Then check general routes
-    foreach ($apiRoutes as $pattern => [$controller, $method]) {
-        if (preg_match("#^$pattern$#", $path, $matches)) {
-            $controller = "\\App\\Controllers\\$controller";
-            $controller = new $controller();
-            array_shift($matches);
-            call_user_func_array([$controller, $method], $matches);
-            exit;
-        }
-    }
-
-    header('HTTP/1.1 404 Not Found');
-    echo json_encode(['error' => 'API endpoint not found']);
-    exit;
 }
 
 // Serve index.html for all other routes (Vue.js will handle routing)
